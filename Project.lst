@@ -1,0 +1,1986 @@
+     1                                  [org 0x0100]
+     2 00000000 E9FC42                  jmp main
+     3                                  
+     4                                  ;globals
+     5 00000003 4F0050005000            pillarcol: dw 79,80,80
+     6 00000009 050006000800            pillarheight: dw 5,6,8
+     7 0000000F 0A0008000900            pillargap: dw 10,8,9
+     8 00000015 010000000000            pillarspawned: dw 1,0,0
+     9 0000001B 0B00                    birdrow: dw 11
+    10 0000001D 0100                    velocity: dw 1
+    11 0000001F 2000<rep FA0h>          buffer: times 4000 dw 0x0020 
+    12 00001F5F 00000000                oldkbisr: dd 0
+    13 00001F63 00000000                oldtimerisr: dd 0
+    14 00001F67 0000                    ticks: dw 0
+    15 00001F69 00000000                loopcount: dd 0
+    16 00001F6D 507265737320616E79-     startmessage: db "Press any key to ducc around"
+    16 00001F76 206B657920746F2064-
+    16 00001F7F 7563632061726F756E-
+    16 00001F88 64                 
+    17 00001F89 437265617465642042-     createdbymessage: db "Created By:"
+    17 00001F92 793A               
+    18 00001F94 312E20536865687279-     name1: db "1. Shehryar Hassan 23L-0603 3H Fall 2024"
+    18 00001F9D 61722048617373616E-
+    18 00001FA6 2032334C2D30363033-
+    18 00001FAF 2033482046616C6C20-
+    18 00001FB8 32303234           
+    19 00001FBC 322E204D6565726162-     name2: db "2. Meerab Munir 23L-0971 3H Fall 2024"
+    19 00001FC5 204D756E6972203233-
+    19 00001FCE 4C2D30393731203348-
+    19 00001FD7 2046616C6C20323032-
+    19 00001FE0 34                 
+    20 00001FE1 507265737320616E79-     titlemessage: db "Press any key to continue..." ;28
+    20 00001FEA 206B657920746F2063-
+    20 00001FF3 6F6E74696E75652E2E-
+    20 00001FFC 2E                 
+    21 00001FFD 507265737320452074-     deathscreenmessage1: db "Press E to return to TitleScreen";32
+    21 00002006 6F2072657475726E20-
+    21 0000200F 746F205469746C6553-
+    21 00002018 637265656E         
+    22 0000201D 507265737320522074-     deathscreenmessage2: db "Press R to play again"
+    22 00002026 6F20706C6179206167-
+    22 0000202F 61696E             
+    23 00002032 507265737320512074-     deathscreenmessage3: db "Press Q to quit" ;15
+    23 0000203B 6F2071756974       
+    24 00002041 507265737320522074-     Pausescreenmessage2: db "Press R to resume"
+    24 0000204A 6F20726573756D65   
+    25 00002052 57656C636F6D652074-     infoscreenmessage1: db "Welcome to the realm of Floppy ducks! We are delighted to have you here :D" ;74
+    25 0000205B 6F2074686520726561-
+    25 00002064 6C6D206F6620466C6F-
+    25 0000206D 707079206475636B73-
+    25 00002076 212057652061726520-
+    25 0000207F 64656C696768746564-
+    25 00002088 20746F206861766520-
+    25 00002091 796F75206865726520-
+    25 0000209A 3A44               
+    26 0000209C 5468652061696D206F-     infoscreenmessage2: db "The aim of the game is to avoid the bad pillars" ;47
+    26 000020A5 66207468652067616D-
+    26 000020AE 6520697320746F2061-
+    26 000020B7 766F69642074686520-
+    26 000020C0 6261642070696C6C61-
+    26 000020C9 7273               
+    27 000020CB 507265737320535041-     infoscreenmessage3: db "Press SPACE Key to jump against gravity" ;39
+    27 000020D4 4345204B657920746F-
+    27 000020DD 206A756D7020616761-
+    27 000020E6 696E73742067726176-
+    27 000020EF 697479             
+    28 000020F2 507265737320455343-     infoscreenmessage4: db "Press ESC key to Pause the game" ;31 
+    28 000020FB 206B657920746F2050-
+    28 00002104 617573652074686520-
+    28 0000210D 67616D65           
+    29 00002111 596F75722053636F72-     infoscreenmessage5: db "Your Score is displayed on the top-left of the screen" ;53
+    29 0000211A 652069732064697370-
+    29 00002123 6C61796564206F6E20-
+    29 0000212C 74686520746F702D6C-
+    29 00002135 656674206F66207468-
+    29 0000213E 652073637265656E   
+    30 00002146 507265737320616E79-     infoscreenmessage6: db "Press any key to start flopping..." ;34
+    30 0000214F 206B657920746F2073-
+    30 00002158 7461727420666C6F70-
+    30 00002161 70696E672E2E2E     
+    31 00002168 0000                    keypressed: dw 0
+    32 0000216A 0300                    TitleBirbRow1: dw 3 
+    33 0000216C 1100                    TitleBirbRow2: dw 17
+    34 0000216E 0000                    TitleBirbflag: dw 0
+    35 00002170 0000                    DeathFlag: dw 0
+    36 00002172 0000                    PauseFlag: dw 0
+    37 00002174 0000                    Score: dw 0
+    38 00002176 FFFF                    currentDelay: dw 0xffff
+    39 00002178 00<rep Ah>              ScoreBuffer: times 10 db 0
+    40 00002182 4A6F657665722E2E2E-     DeathMessage: db "Joever.... :("
+    40 0000218B 2E203A28           
+    41 0000218F 0000                    GameRestart: dw 0
+    42 00002191 0000                    GameStarted: dw 0
+    43 00002193 0000                    GameRetry: dw 0
+    44 00002195 0000                    GameQuit: dw 0
+    45 00002197 EC20                    music_length: dw 8428
+    46 00002199 <bin 20ECh>             music_data: incbin "nazi-nor.imf"
+    47 00004285 0000                    currentTask: dw 0
+    48                                  ; ax bx cx dx si ip cs flags 
+    49 00004287 0000<rep 10h>           pcb: times 2*8 dw 0
+    50                                  
+    51                                  PlayMusic:
+    52 000042A7 BE0000                  	mov si, 0 
+    53                                  	.next_note:
+    54 000042AA BA8803                  			mov dx, 388h
+    55 000042AD 2E8A84[9921]            			mov al, [cs:music_data + si]
+    56 000042B2 EE                      			out dx, al
+    57 000042B3 BA8903                  			mov dx, 389h
+    58 000042B6 2E8A84[9A21]            			mov al, [cs:music_data + si + 1]
+    59 000042BB EE                      			out dx, al
+    60 000042BC 2E8B9C[9B21]            			mov bx, [cs:music_data + si + 2]
+    61 000042C1 83C604                  			add si, 4
+    62                                  		.repeat_delay:	
+    63 000042C4 B9DC05                  			mov cx, 1500
+    64                                  			.delay: 
+    65 000042C7 90                      			nop
+    66 000042C8 E2FD                    			loop .delay
+    67 000042CA 4B                      		dec bx
+    68 000042CB 7FF7                    		jg .repeat_delay
+    69 000042CD 2E3B36[9721]            	cmp si, [cs:music_length]
+    70 000042D2 72D6                    	jb .next_note
+    71 000042D4 EBD1                    jmp PlayMusic
+    72                                  
+    73                                  TimerISR:	
+    74 000042D6 50                      	push ax
+    75                                  	; push bx
+    76                                  	; push cx
+    77                                  	; push dx
+    78                                  	; push si
+    79                                  
+    80                                  	; mov bl, [cs:currentTask]				; read index of current task ... bl = 0
+    81                                  	; mov ax, 16							; space used by one task
+    82                                  	; mul bl								; multiply to get start of task.. 10x0 = 0
+    83                                  	; mov bx, ax							; load start of task in bx....... bx = 0
+    84                                  
+    85                                  	; pop word [cs:pcb+bx+8]
+    86                                  	; pop word [cs:pcb+bx+6]
+    87                                  	; pop word [cs:pcb+bx+4]
+    88                                  	; pop word [cs:pcb+bx+2]
+    89                                  	; pop word [cs:pcb+bx+0]
+    90                                  	; pop word [cs:pcb+bx+10]
+    91                                  	; pop word [cs:pcb+bx+12]
+    92                                  	; pop word [cs:pcb+bx+14]
+    93                                  	
+    94                                  	; inc word [cs:currentTask]
+    95                                  	; and word [cs:currentTask],1
+    96                                  	
+    97                                  	; cmp word [currentTask],0
+    98                                  	; jne endtimer
+    99 000042D7 833E[1D00]00            	cmp word [velocity],0
+   100 000042DC 7517                    	jne endtimer
+   101 000042DE FF06[671F]              	inc word [ticks]
+   102 000042E2 833E[671F]07            	cmp word [ticks],7
+   103 000042E7 750C                    	jne endtimer
+   104 000042E9 C706[671F]0000          	mov word [ticks],0
+   105 000042EF C706[1D00]0100          	mov word [velocity],1
+   106                                  	endtimer:
+   107                                  	
+   108                                  	; mov bl, [cs:currentTask]				; read index of current task
+   109                                  	; mov ax, 16							; space used by one task
+   110                                  	; mul bl								; multiply to get start of task
+   111                                  	; mov bx, ax							; load start of task in bx... 10
+   112                                  	
+   113 000042F5 B020                    	mov al, 0x20
+   114 000042F7 E620                    	out 0x20, al						; send EOI to PIC
+   115                                  	
+   116                                  	; push word [cs:pcb+bx+14]				; flags of new task... pcb+10+8
+   117                                  	; push word [cs:pcb+bx+12]				; cs of new task ... pcb+10+6
+   118                                  	; push word [cs:pcb+bx+10]				; ip of new task... pcb+10+4
+   119                                  	; mov ax, [cs:pcb+bx+0]				; ax of new task...pcb+10+0
+   120                                  	; mov bx, [cs:pcb+bx+2]				; bx of new task...pcb+10+2
+   121                                  	; mov cx, [cs:pcb+bx+4]
+   122                                  	; mov dx, [cs:pcb+bx+6]
+   123                                  	; mov si, [cs:pcb+bx+8]
+   124 000042F9 58                      	pop ax
+   125 000042FA 2EFF2E[631F]            	jmp far[cs:oldtimerisr]
+   126                                  		
+   127                                  main:	
+   128                                  	; mov ax, 0x8000
+   129                                  	; out 0x40, al
+   130                                  	; mov al, ah
+   131                                  	; out 0x40, al
+   132                                  
+   133 000042FF C706[A142][A742]        	mov word [pcb+16+10], PlayMusic	
+   134 00004305 8C0E[A342]              	mov [pcb+16+12], cs						
+   135 00004309 C706[A542]0002          	mov word [pcb+16+14], 0x0200		
+   136 0000430F C706[8542]0000          	mov word [currentTask], 0
+   137                                  	
+   138 00004315 E86E06                  	call hook
+   139                                  	
+   140                                  	Game:
+   141 00004318 E8A80B                  	call TitleScreen
+   142 0000431B E8EF01                  	call InfoScreen
+   143                                  	mainlabel1:
+   144 0000431E E8DF06                      call PrintGround
+   145 00004321 E82A0A                  	call PrintBackground
+   146 00004324 E8160B                      call PrintBirb                 
+   147 00004327 E8500A                      call CopyBuffer
+   148 0000432A E83E06                  	call PrintStartMessage	
+   149                                  
+   150 0000432D B400                    	mov ah,0
+   151 0000432F CD16                    	int 0x16
+   152 00004331 C706[9121]0100          	mov word [GameStarted],1
+   153                                  	
+   154                                  	infloop:
+   155 00004337 E8AC05                  		call CheckDeath
+   156 0000433A E8110A                  		call PrintBackground
+   157 0000433D E84C03                  		call PrintPillars
+   158 00004340 E8FA0A                  		call PrintBirb
+   159 00004343 E87D01                  		call ApplyGravity 		
+   160 00004346 E8B509                  		call MoveGround
+   161 00004349 E87E09                  		call DisplayScore
+   162 0000434C E86C02                  		call PausePanel
+   163 0000434F E83004                  		call DeathPanel
+   164 00004352 E8250A                  		call CopyBuffer
+   165                                  		
+   166 00004355 833E[9521]01            		cmp word [GameQuit],1
+   167 0000435A 7502                    		jne ahead20
+   168 0000435C EB27                    		jmp gamequit
+   169                                  			
+   170                                  		ahead20: 
+   171 0000435E E80C04                  		call delay
+   172                                  		
+   173 00004361 833E[8F21]01            		cmp word [GameRestart],1
+   174 00004366 750B                    		jne ahead17
+   175 00004368 B40C                    		mov ah,0x0C
+   176 0000436A B000                    		mov al,0
+   177 0000436C CD21                    		int 21h
+   178 0000436E E82500                  		call InitialiseVars
+   179 00004371 EBA5                    		jmp Game
+   180                                  		
+   181                                  		ahead17:
+   182 00004373 833E[9321]01            		cmp word [GameRetry],1
+   183 00004378 75BD                    		jne infloop
+   184 0000437A B40C                    		mov ah,0x0C
+   185 0000437C B000                    		mov al,0
+   186 0000437E CD21                    		int 21h
+   187 00004380 E81300                  		call InitialiseVars
+   188 00004383 EB99                    		jmp mainlabel1
+   189                                  		
+   190                                  	gamequit:
+   191 00004385 E83E06                  	call unhook
+   192 00004388 E8EC02                  	call clear
+   193 0000438B B40C                    	mov ah,0x0C
+   194 0000438D B000                    	mov al,0
+   195 0000438F CD21                    	int 21h
+   196 00004391 B8004C                  mov ax,0x4c00
+   197 00004394 CD21                    int 0x21
+   198                                  
+   199                                  InitialiseVars:
+   200 00004396 C706[0300]4F00          	mov word [pillarcol],79
+   201 0000439C C706[0500]5000          	mov word [pillarcol+2],80
+   202 000043A2 C706[0700]5000          	mov word [pillarcol+4],80
+   203                                  	
+   204 000043A8 C706[1500]0100          	mov word [pillarspawned],1
+   205 000043AE C706[1700]0000          	mov word [pillarspawned+2],0
+   206 000043B4 C706[1900]0000          	mov word [pillarspawned+4],0
+   207                                  	
+   208 000043BA C706[1B00]0B00          	mov word [birdrow],11
+   209 000043C0 C706[1D00]0100          	mov word[velocity],1
+   210 000043C6 C706[671F]0000          	mov word [ticks],0
+   211 000043CC C706[691F]0000          	mov word [loopcount],0
+   212 000043D2 C706[6B1F]0000          	mov word [loopcount+2],0
+   213 000043D8 C706[6821]0000          	mov word [keypressed],0
+   214 000043DE C706[7021]0000          	mov word [DeathFlag],0
+   215 000043E4 C706[7421]0000          	mov word [Score],0
+   216 000043EA C706[7621]FFFF          	mov word [currentDelay],0xffff
+   217 000043F0 C706[8F21]0000          	mov word [GameRestart],0
+   218 000043F6 C706[9121]0000          	mov word [GameStarted],0
+   219 000043FC C706[9321]0000          	mov word [GameRetry],0
+   220 00004402 C706[7221]0000          	mov word [PauseFlag],0
+   221 00004408 C3                      	ret
+   222                                  
+   223                                  kbisr:
+   224 00004409 50                          push ax
+   225 0000440A E460                    	in al, 0x60 
+   226 0000440C 833E[9121]00            	cmp word [GameStarted],0
+   227 00004411 0F84A400                	je kbisr_end
+   228                                  
+   229 00004415 833E[7021]01            	cmp word[DeathFlag],1
+   230 0000441A 752E                    	jne morecomp
+   231 0000441C 833E[1B00]13            	cmp word [birdrow],19
+   232 00004421 0F859400                	jne kbisr_end
+   233 00004425 3C10                    	cmp al,0x10
+   234 00004427 7509                    	jne ahead19
+   235 00004429 C706[9521]0100          	mov word [GameQuit],1
+   236 0000442F E98700                  	jmp kbisr_end
+   237                                  	ahead19:
+   238 00004432 3C12                    	cmp al,0x12
+   239 00004434 7508                    	jne ahead16
+   240 00004436 C706[8F21]0100          	mov word[GameRestart],1
+   241 0000443C EB7B                        jmp kbisr_end
+   242                                  	ahead16:
+   243 0000443E 3C13                    	cmp al,0x13
+   244 00004440 7508                    	jne morecomp
+   245 00004442 C706[9321]0100          	mov word [GameRetry],1
+   246 00004448 EB6F                    	jmp kbisr_end
+   247                                  	
+   248                                  	morecomp:	
+   249 0000444A 833E[7221]01            	cmp word[PauseFlag],1
+   250 0000444F 7524                    	jne morecomp1
+   251 00004451 3C10                    	cmp al,0x10
+   252 00004453 7508                    	jne ahead23
+   253 00004455 C706[9521]0100          	mov word [GameQuit],1
+   254 0000445B EB5C                    	jmp kbisr_end
+   255                                  	ahead23:
+   256 0000445D 3C12                    	cmp al,0x12
+   257 0000445F 7508                    	jne ahead21
+   258 00004461 C706[8F21]0100          	mov word[GameRestart],1
+   259 00004467 EB50                        jmp kbisr_end
+   260                                  	ahead21:
+   261 00004469 3C13                    	cmp al,0x13
+   262 0000446B 7508                    	jne morecomp1
+   263 0000446D C706[7221]0000          	mov word [PauseFlag],0
+   264 00004473 EB44                    	jmp kbisr_end
+   265                                  	
+   266                                  	morecomp1:
+   267 00004475 3C01                    	cmp al,0x01
+   268 00004477 7508                    	jne ahead22
+   269 00004479 C706[7221]0100          	mov word [PauseFlag],1
+   270 0000447F EB38                    	jmp kbisr_end
+   271                                  	ahead22:
+   272 00004481 3C39                    	cmp al, 0x39        ; Check if space key (make code)
+   273 00004483 7406                        je key_pressed
+   274 00004485 3CB9                        cmp al, 0xb9             ; Check if space key (break code)
+   275 00004487 741D                        je key_released
+   276 00004489 EB2E                    	jmp kbisr_end
+   277                                  	             
+   278                                  	key_pressed:
+   279 0000448B 833E[7021]01            		cmp word [DeathFlag], 1  ; If the game is over, skip
+   280 00004490 7427                    		je kbisr_end
+   281 00004492 C706[671F]0000          		mov word [ticks], 0
+   282 00004498 C706[1D00]FFFF          		mov word [velocity], -1  ; Set velocity to -1
+   283 0000449E C706[6821]0100          		mov word [keypressed], 1 ; Mark key as pressed
+   284 000044A4 EB13                    		jmp kbisr_end
+   285                                  
+   286                                  	key_released:
+   287 000044A6 833E[7021]01            		cmp word [DeathFlag], 1  ; If the game is over, skip
+   288 000044AB 740C                    		je kbisr_end
+   289 000044AD C706[1D00]0000          		mov word [velocity], 0   ; Set velocity to 0
+   290 000044B3 C706[6821]0000          		mov word [keypressed], 0 ; Mark key as released
+   291                                  
+   292                                  	kbisr_end:
+   293 000044B9 B020                    		mov al, 0x20
+   294 000044BB E620                    		out 0x20, al             ; Send EOI to PIC
+   295 000044BD 58                      		pop ax
+   296 000044BE 2EFF2E[5F1F]            		jmp far [cs:oldkbisr]
+   297                                  		
+   298                                  ApplyGravity:
+   299 000044C3 60                          pusha
+   300 000044C4 FF06[691F]              	inc word [loopcount]
+   301 000044C8 833E[691F]01            	cmp word[loopcount],1
+   302 000044CD 753C                    	jne no_adjust
+   303 000044CF C706[691F]0000          	mov word[loopcount],0
+   304                                  	
+   305 000044D5 833E[7221]01            	cmp word [PauseFlag],1
+   306 000044DA 742F                    	je no_adjust
+   307                                  	
+   308 000044DC A1[1D00]                    mov ax, [velocity]
+   309 000044DF 0106[1B00]                  add [birdrow], ax 
+   310                                  	
+   311 000044E3 833E[1B00]13                cmp word [birdrow], 19
+   312 000044E8 7E0E                        jle ahead7
+   313 000044EA C706[1B00]1300              mov word [birdrow], 19
+   314 000044F0 C706[1D00]0000              mov word [velocity], 0 
+   315 000044F6 EB13                    	jmp no_adjust
+   316                                  	
+   317                                  	ahead7:
+   318 000044F8 833E[1B00]01            	cmp word [birdrow], 1
+   319 000044FD 7D0C                        jge no_adjust
+   320 000044FF C706[1B00]0100              mov word [birdrow], 1
+   321 00004505 C706[1D00]0000          	mov word [velocity], 0
+   322                                  	
+   323                                  	no_adjust:
+   324 0000450B 61                          popa
+   325 0000450C C3                          ret
+   326                                  	
+   327                                  InfoScreen:
+   328 0000450D 60                      	pusha
+   329 0000450E 06                      	push es
+   330 0000450F B800B8                  	mov ax,0xb800
+   331 00004512 8EC0                    	mov es,ax
+   332 00004514 B82030                  	mov ax,0x3020
+   333 00004517 B9D007                  	mov cx,2000
+   334 0000451A BF0000                  	mov di,0
+   335 0000451D FC                      	cld
+   336 0000451E F3AB                    	rep stosw 
+   337 00004520 6A15                    	push word 21
+   338 00004522 6A17                    	push word 23
+   339 00004524 E87107                  	call PrintCloudTitle
+   340 00004527 6A03                    	push word 3
+   341 00004529 6A40                    	push word 64
+   342 0000452B E86A07                  	call PrintCloudTitle
+   343 0000452E 6A02                    	push word 2
+   344 00004530 6A23                    	push word 35
+   345 00004532 E86307                  	call PrintCloudTitle
+   346 00004535 6A03                    	push word 3
+   347 00004537 6A0A                    	push word 10
+   348 00004539 E85C07                  	call PrintCloudTitle
+   349 0000453C 6A14                    	push word 20
+   350 0000453E 6A32                    	push word 50
+   351 00004540 E85507                  	call PrintCloudTitle
+   352 00004543 6A12                    	push word 18
+   353 00004545 6A02                    	push word 2
+   354 00004547 E84E07                  	call PrintCloudTitle
+   355 0000454A 6A0C                    	push word 12
+   356 0000454C 6A44                    	push word 68
+   357 0000454E E84707                  	call PrintCloudTitle
+   358 00004551 6A09                    	push word 9
+   359 00004553 6A03                    	push word 3
+   360 00004555 E84007                  	call PrintCloudTitle
+   361                                  	
+   362 00004558 B413                    	mov ah,0x13
+   363 0000455A B000                    	mov al,0
+   364 0000455C B700                    	mov bh,0
+   365 0000455E 1E                      	push ds
+   366 0000455F 07                      	pop es
+   367                                  	
+   368 00004560 B94A00                  	mov cx,74
+   369 00004563 B33E                    	mov bl,0x3E
+   370 00004565 B605                    	mov dh,5
+   371 00004567 B203                    	mov dl,3
+   372 00004569 BD[5220]                	mov bp,infoscreenmessage1
+   373 0000456C CD10                    	int 0x10
+   374                                  	
+   375 0000456E B92F00                  	mov cx,47
+   376 00004571 B33C                    	mov bl,0x3C
+   377 00004573 B608                    	mov dh,8
+   378 00004575 B210                    	mov dl,16
+   379 00004577 BD[9C20]                	mov bp,infoscreenmessage2
+   380 0000457A CD10                    	int 0x10
+   381                                  	
+   382 0000457C B92700                  	mov cx,39
+   383 0000457F B33E                    	mov bl,0x3E
+   384 00004581 B60B                    	mov dh,11
+   385 00004583 B214                    	mov dl,20
+   386 00004585 BD[CB20]                	mov bp,infoscreenmessage3
+   387 00004588 CD10                    	int 0x10
+   388                                  	
+   389 0000458A B91F00                  	mov cx,31
+   390 0000458D B33C                    	mov bl,0x3C
+   391 0000458F B60E                    	mov dh,14
+   392 00004591 B218                    	mov dl,24
+   393 00004593 BD[F220]                	mov bp,infoscreenmessage4
+   394 00004596 CD10                    	int 0x10
+   395                                  	
+   396 00004598 B93500                  	mov cx,53
+   397 0000459B B33E                    	mov bl,0x3E
+   398 0000459D B611                    	mov dh,17
+   399 0000459F B20D                    	mov dl,13
+   400 000045A1 BD[1121]                	mov bp,infoscreenmessage5
+   401 000045A4 CD10                    	int 0x10
+   402                                  	
+   403 000045A6 B92200                  	mov cx,34
+   404 000045A9 B33F                    	mov bl,0x3F
+   405 000045AB B617                    	mov dh,23
+   406 000045AD B22D                    	mov dl,45
+   407 000045AF BD[4621]                	mov bp,infoscreenmessage6
+   408 000045B2 CD10                    	int 0x10
+   409                                  	
+   410 000045B4 B400                    	mov ah,0
+   411 000045B6 CD16                    	int 0x16
+   412 000045B8 07                      	pop es
+   413 000045B9 61                      	popa
+   414 000045BA C3                      	ret
+   415                                  	
+   416                                  PausePanel:
+   417 000045BB 60                      	pusha
+   418 000045BC 06                          push es
+   419 000045BD 1E                      	push ds
+   420 000045BE 833E[7221]00            	cmp word [PauseFlag],0
+   421 000045C3 0F84AC00                	je NoPause
+   422 000045C7 1E                      	push ds
+   423 000045C8 07                      	pop es
+   424 000045C9 BF6A01                      mov di, (80 * 2 + 21) * 2 
+   425 000045CC 81C7[1F00]              	add di,buffer
+   426 000045D0 B40E                        mov ah, 0x0e             
+   427 000045D2 B0DB                        mov al, 0xdb
+   428 000045D4 BB0E00                      mov bx, 14            
+   429                                  	DrawRow1:
+   430 000045D7 B92600                  		mov cx, 38              
+   431                                  		FillRow1:
+   432 000045DA AB                      			stosw                    
+   433 000045DB E2FD                    			loop FillRow1           
+   434 000045DD 83C754                  			add di, (80 - 38) * 2     
+   435 000045E0 4B                      			dec bx                   
+   436 000045E1 75F4                    			jnz DrawRow1        
+   437 000045E3 BF6A01                  	mov di, (80 * 2 + 21) * 2 
+   438 000045E6 81C7[1F00]              	add di,buffer
+   439 000045EA B400                        mov ah, 0x00             
+   440 000045EC B0DB                        mov al, 0xdb
+   441 000045EE B92600                      mov cx,38
+   442 000045F1 FC                      	cld 
+   443 000045F2 F3AB                    	rep stosw
+   444 000045F4 B92600                  	mov cx,38
+   445 000045F7 81C77408                	add di,14*160-76
+   446 000045FB FC                      	cld 
+   447 000045FC F3AB                    	rep stosw
+   448                                  	
+   449 000045FE BFCA02                  	mov di,(80*4+37)*2
+   450 00004601 81C7[1F00]              	add di,buffer
+   451 00004605 B90400                  	mov cx,4
+   452 00004608 B404                    	mov ah,0x04
+   453 0000460A B0DB                    	mov al,0xdb
+   454                                  	lop8:
+   455 0000460C 268905                  		mov [es:di],ax
+   456 0000460F 81C7A000                		add di,160
+   457 00004613 E2F7                    		loop lop8
+   458                                  	
+   459 00004615 81EF9E00                	sub di,158
+   460 00004619 B90400                  	mov cx,4
+   461                                  	lop9:
+   462 0000461C 268905                  		mov [es:di],ax
+   463 0000461F 81EFA000                		sub di,160
+   464 00004623 E2F7                    		loop lop9
+   465                                  		
+   466 00004625 81C7A800                	add di,168
+   467 00004629 B90400                  	mov cx,4
+   468                                  	lop10:
+   469 0000462C 268905                  		mov [es:di],ax
+   470 0000462F 81C7A000                		add di,160
+   471 00004633 E2F7                    		loop lop10
+   472                                  	
+   473 00004635 81EF9E00                	sub di,158
+   474 00004639 B90400                  	mov cx,4
+   475                                  	lop11:
+   476 0000463C 268905                  		mov [es:di],ax
+   477 0000463F 81EFA000                		sub di,160
+   478 00004643 E2F7                    		loop lop11
+   479                                  		
+   480 00004645 B92000                  	mov cx,32
+   481 00004648 BE[FD1F]                	mov si,deathscreenmessage1
+   482 0000464B BF[CF07]                	mov di,1968+buffer
+   483 0000464E B40F                    	mov ah,00001111b
+   484 00004650 FC                      	cld
+   485                                  	lop6:
+   486 00004651 AC                      		lodsb
+   487 00004652 AB                      		stosw
+   488 00004653 E2FC                    	loop lop6
+   489                                  	
+   490 00004655 B90F00                  	mov cx,15
+   491 00004658 BE[3220]                	mov si,deathscreenmessage3
+   492 0000465B BF[2109]                	mov di,2306+buffer
+   493 0000465E B40F                    	mov ah,00001111b
+   494 00004660 FC                      	cld
+   495                                  	lop5:
+   496 00004661 AC                      		lodsb
+   497 00004662 AB                      		stosw
+   498 00004663 E2FC                    	loop lop5
+   499                                  	
+   500 00004665 B91100                  	mov cx,17
+   501 00004668 BE[4120]                	mov si,Pausescreenmessage2
+   502 0000466B BF[9F06]                	mov di,1664+buffer
+   503 0000466E FC                      	cld
+   504                                  	lop1:
+   505 0000466F AC                      		lodsb
+   506 00004670 AB                      		stosw
+   507 00004671 E2FC                    	loop lop1
+   508                                  	NoPause:
+   509 00004673 1F                          pop ds
+   510 00004674 07                          pop es
+   511 00004675 61                          popa
+   512 00004676 C3                          ret
+   513                                  	
+   514                                  
+   515                                  clear:
+   516 00004677 60                      pusha
+   517 00004678 B800B8                  mov ax,0xb800
+   518 0000467B 8EC0                    mov es,ax 
+   519 0000467D BF0000                  mov di,0
+   520 00004680 B9D007                  mov cx,2000
+   521                                  
+   522 00004683 B407                    mov ah,0x07
+   523 00004685 B020                    mov al,' '
+   524 00004687 FC                      cld
+   525                                  
+   526 00004688 F3AB                    rep stosw
+   527                                  
+   528 0000468A 61                      popa
+   529 0000468B C3                      ret
+   530                                  
+   531                                  PrintPillars:
+   532 0000468C 60                      	pusha
+   533                                  	
+   534 0000468D 833E[1700]00            	cmp word [pillarspawned+2],0
+   535 00004692 7511                    	jne ahead5
+   536 00004694 833E[0300]35            	cmp word [pillarcol],53
+   537 00004699 7F0A                    	jg ahead5
+   538 0000469B FF0E[0500]              		dec word[pillarcol+2]
+   539 0000469F C706[1700]0100          		mov word [pillarspawned+2],1
+   540                                  	ahead5:
+   541 000046A5 833E[1900]00            	cmp word [pillarspawned+4],0
+   542 000046AA 7511                    	jne ahead6
+   543 000046AC 833E[0500]34            	cmp word [pillarcol+2],52
+   544 000046B1 7F0A                    	jg ahead6
+   545 000046B3 FF0E[0700]              		dec word[pillarcol+4]
+   546 000046B7 C706[1900]0100          		mov word [pillarspawned+4],1
+   547                                  	ahead6:
+   548                                  	
+   549 000046BD B90100                  	mov cx,1
+   550 000046C0 833E[1700]00            	cmp word [pillarspawned+2],0
+   551 000046C5 7401                    	je ahead3
+   552 000046C7 41                      		inc cx
+   553                                  	ahead3:
+   554 000046C8 833E[1900]00            	cmp word [pillarspawned+4],0
+   555 000046CD 7401                    	je ahead4
+   556 000046CF 41                      		inc cx
+   557                                  	ahead4:
+   558 000046D0 BA0000                  	mov dx,0
+   559                                  	
+   560                                  	PillarsPrinting:
+   561 000046D3 89D3                    	mov bx,dx
+   562 000046D5 D1E3                    	shl bx,1
+   563 000046D7 83BF[0300]FD            	cmp word[pillarcol+bx], -3
+   564 000046DC 7D28                    	jge ahead2
+   565 000046DE C787[0300]4F00          	mov word[pillarcol+bx],79
+   566 000046E4 83EC02                  	sub sp,2
+   567 000046E7 6A05                    	push word 5
+   568 000046E9 E87606                  	call Rand
+   569 000046EC 8F87[0900]              	pop word[pillarheight+bx]
+   570 000046F0 8387[0900]02            	add word [pillarheight+bx],2
+   571 000046F5 83EC02                  	sub sp,2
+   572 000046F8 6A04                    	push word 4
+   573 000046FA E86506                  	call Rand
+   574 000046FD 8F87[0F00]              	pop word[pillargap+bx]
+   575 00004701 8387[0F00]07            	add word [pillargap+bx],7
+   576                                  	
+   577                                  	ahead2:
+   578 00004706 FFB7[0300]              	push word [pillarcol+bx]
+   579 0000470A 6A00                    	push word 0
+   580 0000470C FFB7[0900]              	push word [pillarheight+bx] ;height
+   581 00004710 6A00                    	push word 0;direction
+   582 00004712 E89804                  	call PrintPillar
+   583                                  	
+   584 00004715 FFB7[0300]              	push word [pillarcol+bx]
+   585 00004719 8B87[0900]              	mov ax,[pillarheight+bx]
+   586 0000471D 0387[0F00]              	add ax,[pillargap+bx]
+   587 00004721 50                      	push word ax
+   588 00004722 B81400                  	mov ax,20
+   589 00004725 2B87[0900]              	sub ax,[pillarheight+bx]
+   590 00004729 2B87[0F00]              	sub ax,[pillargap+bx]	
+   591 0000472D 50                      	push word ax;height
+   592 0000472E 6A01                    	push word 1;direction
+   593 00004730 E87A04                  	call PrintPillar
+   594 00004733 833E[7021]01            	cmp word [DeathFlag],1
+   595 00004738 742A                    	je endpillars
+   596 0000473A 833E[7221]01            	cmp word [PauseFlag],1
+   597 0000473F 7423                    	je endpillars
+   598 00004741 FF8F[0300]              	dec word [pillarcol+bx]
+   599 00004745 83BF[0300]22            	cmp word [pillarcol+bx],34
+   600 0000474A 7518                    	jne endpillars
+   601 0000474C FF06[7421]              	inc word [Score]
+   602 00004750 812E[7621]0002          	sub word [currentDelay],0x200
+   603 00004756 813E[7621]0070          	cmp word [currentDelay],0x7000
+   604 0000475C 7306                    	jae endpillars
+   605 0000475E C706[7621]0070          	mov word [currentDelay],0x7000
+   606                                  	endpillars:
+   607 00004764 42                      	inc dx
+   608 00004765 39CA                    	cmp dx,cx
+   609 00004767 0F8C68FF                	jl PillarsPrinting
+   610                                  	
+   611 0000476B 61                      	popa
+   612 0000476C C3                      	ret 
+   613                                  	
+   614                                  delay:
+   615 0000476D 60                      pusha
+   616 0000476E 8B0E[7621]              mov cx,[currentDelay]
+   617                                   delayloop:
+   618 00004772 E2FE                     loop delayloop
+   619 00004774 8B0E[7621]               mov cx,[currentDelay]
+   620                                   delayloop1:
+   621 00004778 E2FE                     loop delayloop1
+   622 0000477A 8B0E[7621]               mov cx,[currentDelay]
+   623                                   delayloop2:
+   624 0000477E E2FE                     loop delayloop2
+   625                                  
+   626 00004780 61                      popa
+   627 00004781 C3                      ret
+   628                                  
+   629                                  DeathPanel:
+   630 00004782 60                      	pusha
+   631 00004783 06                          push es
+   632 00004784 1E                      	push ds
+   633 00004785 833E[7021]00            	cmp word [DeathFlag],0
+   634 0000478A 0F845401                	je NoDeath
+   635 0000478E 833E[1B00]13            	cmp word [birdrow],19
+   636 00004793 0F854B01                	jne NoDeath
+   637 00004797 1E                      	push ds
+   638 00004798 07                      	pop es
+   639 00004799 BF6A01                      mov di, (80 * 2 + 21) * 2 
+   640 0000479C 81C7[1F00]              	add di,buffer
+   641 000047A0 B40E                        mov ah, 0x0e             
+   642 000047A2 B0DB                        mov al, 0xdb
+   643 000047A4 BB0E00                      mov bx, 14            
+   644                                  	DrawRow:
+   645 000047A7 B92600                  		mov cx, 38              
+   646                                  		FillRow:
+   647 000047AA AB                      			stosw                    
+   648 000047AB E2FD                    			loop FillRow              
+   649 000047AD 83C754                  			add di, (80 - 38) * 2     
+   650 000047B0 4B                      			dec bx                   
+   651 000047B1 75F4                    			jnz DrawRow        
+   652 000047B3 BF6A01                  	mov di, (80 * 2 + 21) * 2 
+   653 000047B6 81C7[1F00]              	add di,buffer
+   654 000047BA B400                        mov ah, 0x00             
+   655 000047BC B0DB                        mov al, 0xdb
+   656 000047BE B92600                      mov cx,38
+   657 000047C1 FC                      	cld 
+   658 000047C2 F3AB                    	rep stosw
+   659 000047C4 B92600                  	mov cx,38
+   660 000047C7 81C77408                	add di,14*160-76
+   661 000047CB FC                      	cld 
+   662 000047CC F3AB                    	rep stosw
+   663                                  	
+   664 000047CE BFB802                  	mov di, (80 * 4 + 28) * 2 
+   665 000047D1 81C7[1F00]              	add di,buffer
+   666 000047D5 B0DB                    	mov al,0xdb
+   667 000047D7 B404                    	mov ah, 00000100b
+   668                                  
+   669 000047D9 B90400                  	mov cx,4
+   670 000047DC FC                      	cld
+   671 000047DD F3AB                    	rep stosw
+   672                                  	
+   673 000047DF 81C79E00                	add di,158
+   674 000047E3 B90300                  	mov cx,3
+   675                                  	printO:
+   676 000047E6 268905                  		mov [es:di],ax
+   677 000047E9 81C7A000                		add di,160
+   678 000047ED E2F7                    		loop printO
+   679                                  
+   680 000047EF B90400                  	mov cx,4
+   681 000047F2 FD                      	std
+   682 000047F3 F3AB                    	rep stosw
+   683                                  	
+   684 000047F5 B90500                  	mov cx,5
+   685 000047F8 FC                      	cld
+   686                                  	printO1:
+   687 000047F9 268905                  		mov [es:di],ax
+   688 000047FC 81EFA000                		sub di,160
+   689 00004800 E2F7                    		loop printO1
+   690                                  		
+   691 00004802 81C7AE00                	add di,174
+   692 00004806 268905                      mov [es:di],ax
+   693 00004809 81C7A000                	add di,160
+   694 0000480D 268905                  	mov [es:di],ax
+   695 00004810 81C7A200                	add di,162
+   696 00004814 268905                  	mov [es:di],ax
+   697 00004817 81C7A000                	add di,160
+   698 0000481B 268905                  	mov [es:di],ax
+   699 0000481E 81C7A200                	add di,162
+   700                                  	
+   701 00004822 268905                  	mov [es:di],ax
+   702 00004825 81EF9E00                	sub di,158
+   703 00004829 268905                  	mov [es:di],ax
+   704 0000482C 81EFA000                	sub di,160
+   705 00004830 268905                  	mov [es:di],ax
+   706 00004833 81EF9E00                	sub di,158
+   707 00004837 268905                  	mov [es:di],ax
+   708 0000483A 81EFA000                	sub di,160
+   709 0000483E 268905                  	mov [es:di],ax
+   710                                  	
+   711 00004841 83C706                  	add di,6
+   712 00004844 B90400                  	mov cx,4
+   713                                  	printE:
+   714 00004847 268905                  		mov [es:di],ax
+   715 0000484A 81C7A000                		add di,160
+   716 0000484E E2F7                    		loop printE
+   717                                  	
+   718 00004850 B90400                  	mov cx,4
+   719 00004853 FC                      	cld
+   720 00004854 F3AB                    	rep stosw
+   721                                  	
+   722 00004856 81EF4601                	sub di,326
+   723                                  	
+   724 0000485A B90300                  	mov cx,3
+   725 0000485D FC                      	cld
+   726 0000485E F3AB                    	rep stosw
+   727                                  	
+   728 00004860 81EF4601                	sub di,326
+   729 00004864 B90300                  	mov cx,3
+   730 00004867 FC                      	cld
+   731 00004868 F3AB                    	rep stosw
+   732                                  	
+   733 0000486A 83C706                  	add di,6
+   734 0000486D B90500                  	mov cx,5
+   735 00004870 FC                      	cld
+   736 00004871 F3AB                    	rep stosw
+   737                                  	
+   738 00004873 81C79E00                	add di,158
+   739 00004877 B90200                  	mov cx,2
+   740                                  	printR:
+   741 0000487A 268905                  		mov [es:di],ax
+   742 0000487D 81C7A000                		add di,160
+   743 00004881 E2F7                    		loop printR
+   744 00004883 81EFA000                	sub di,160
+   745 00004887 B90500                  	mov cx,5
+   746 0000488A FD                      	std
+   747 0000488B F3AB                    	rep stosw
+   748                                  	
+   749 0000488D 81EF9E00                	sub di,158
+   750 00004891 268905                  	mov [es:di],ax
+   751                                  	
+   752 00004894 81C74001                	add di,320
+   753 00004898 B90200                  	mov cx,2
+   754                                  	printR2:
+   755 0000489B 268905                  		mov [es:di],ax
+   756 0000489E 81C7A000                		add di,160
+   757 000048A2 E2F7                    		loop printR2
+   758                                  		
+   759 000048A4 81EF3C01                	sub di,316
+   760 000048A8 B90200                  	mov cx,2
+   761                                  	printR3:
+   762 000048AB 268905                  		mov [es:di],ax
+   763 000048AE 81C7A200                		add di,162
+   764 000048B2 E2F7                    		loop printR3
+   765                                  		
+   766 000048B4 B92000                  	mov cx,32
+   767 000048B7 BE[FD1F]                	mov si,deathscreenmessage1
+   768 000048BA BF[CF07]                	mov di,1968+buffer
+   769 000048BD B40F                    	mov ah,00001111b
+   770 000048BF FC                      	cld
+   771                                  	lop3:
+   772 000048C0 AC                      		lodsb
+   773 000048C1 AB                      		stosw
+   774 000048C2 E2FC                    	loop lop3
+   775                                  	
+   776 000048C4 B90F00                  	mov cx,15
+   777 000048C7 BE[3220]                	mov si,deathscreenmessage3
+   778 000048CA BF[2109]                	mov di,2306+buffer
+   779 000048CD B40F                    	mov ah,00001111b
+   780 000048CF FC                      	cld
+   781                                  	lop7:
+   782 000048D0 AC                      		lodsb
+   783 000048D1 AB                      		stosw
+   784 000048D2 E2FC                    	loop lop7
+   785                                  	
+   786 000048D4 B91500                  	mov cx,21
+   787 000048D7 BE[1D20]                	mov si,deathscreenmessage2
+   788 000048DA BF[9B06]                	mov di,1660+buffer
+   789 000048DD FC                      	cld
+   790                                  	lop4:
+   791 000048DE AC                      		lodsb
+   792 000048DF AB                      		stosw
+   793 000048E0 E2FC                    	loop lop4
+   794                                  	NoDeath:
+   795 000048E2 1F                          pop ds
+   796 000048E3 07                          pop es
+   797 000048E4 61                          popa
+   798 000048E5 C3                          ret
+   799                                  
+   800                                  CheckDeath:
+   801 000048E6 60                      	pusha
+   802                                  	
+   803 000048E7 BB0000                  	mov bx,0
+   804 000048EA B90300                  	mov cx,3
+   805 000048ED 833E[7021]01            	cmp word [DeathFlag],1
+   806 000048F2 7508                    	jne deathloop
+   807 000048F4 E876FE                  	call delay
+   808 000048F7 E873FE                  	call delay
+   809 000048FA EB6D                    	jmp deathend
+   810                                  	deathloop:
+   811 000048FC 8B87[0900]              	mov ax,[pillarheight+bx]
+   812 00004900 3906[1B00]              	cmp word [birdrow],ax
+   813 00004904 7F28                    	jg enddeath
+   814 00004906 83BF[0300]23            	cmp word [pillarcol+bx],35
+   815 0000490B 7C21                    	jl enddeath
+   816 0000490D 83BF[0300]2A            	cmp word [pillarcol+bx],42
+   817 00004912 7F1A                    	jg enddeath
+   818 00004914 C706[7021]0100          	mov word [DeathFlag],1
+   819 0000491A C706[7621]0090          	mov word [currentDelay],0x9000
+   820 00004920 C706[1D00]0000          	mov word [velocity],0
+   821 00004926 E844FE                  	call delay
+   822 00004929 E841FE                  	call delay
+   823 0000492C EB3B                    	jmp deathend
+   824                                  	enddeath:
+   825 0000492E 8B87[0900]              	mov ax,[pillarheight+bx]
+   826 00004932 0387[0F00]              	add ax,[pillargap+bx]
+   827 00004936 3906[1B00]              	cmp word [birdrow],ax
+   828 0000493A 7C28                    	jl enddeath2
+   829 0000493C 83BF[0300]23            	cmp word [pillarcol+bx],35
+   830 00004941 7C21                    	jl enddeath2
+   831 00004943 83BF[0300]2A            	cmp word [pillarcol+bx],42
+   832 00004948 7F1A                    	jg enddeath2
+   833 0000494A C706[7021]0100          	mov word [DeathFlag],1
+   834 00004950 C706[7621]0090          	mov word [currentDelay],0x9000
+   835 00004956 C706[1D00]0000          	mov word [velocity],0                              
+   836 0000495C E80EFE                  	call delay
+   837 0000495F E80BFE                  	call delay
+   838 00004962 EB05                    	jmp deathend
+   839                                  	enddeath2:
+   840 00004964 83C302                  	add bx,2
+   841 00004967 E293                    	loop deathloop
+   842                                  		
+   843                                  	deathend:
+   844 00004969 61                      	popa
+   845 0000496A C3                      	ret
+   846                                  
+   847                                  PrintStartMessage:
+   848 0000496B 60                      	pusha
+   849 0000496C 06                      	push es
+   850 0000496D B413                    	mov ah,0x13
+   851 0000496F B000                    	mov al,0
+   852 00004971 B700                    	mov bh,0
+   853 00004973 B33C                    	mov bl,0x3C
+   854 00004975 B91C00                  	mov cx,28
+   855 00004978 B60E                    	mov dh, 14
+   856 0000497A B21A                    	mov dl, 26
+   857 0000497C 1E                      	push ds
+   858 0000497D 07                      	pop es
+   859 0000497E BD[6D1F]                	mov bp,startmessage
+   860 00004981 CD10                    	int 0x10
+   861 00004983 07                      	pop es
+   862 00004984 61                      	popa
+   863 00004985 C3                      	ret
+   864                                  
+   865                                  hook:
+   866 00004986 50                      	push ax
+   867 00004987 06                      	push es
+   868 00004988 B80000                  	mov ax,0 ;hooking
+   869 0000498B 8EC0                    	mov es,ax
+   870 0000498D 26A12400                	mov ax, [es:9*4]
+   871 00004991 A3[5F1F]                	mov [oldkbisr],ax
+   872 00004994 26A12600                	mov ax,[es:9*4+2]
+   873 00004998 A3[611F]                	mov [oldkbisr+2],ax
+   874 0000499B 26A12000                	mov ax, [es:8*4]
+   875 0000499F A3[631F]                	mov [oldtimerisr],ax
+   876 000049A2 26A12200                	mov ax,[es:8*4+2]
+   877 000049A6 A3[651F]                	mov [oldtimerisr+2],ax
+   878 000049A9 FA                      	cli
+   879 000049AA 26C7062400[0944]        	mov word [es:9*4],kbisr
+   880 000049B1 268C0E2600              	mov word [es:9*4+2],cs
+   881 000049B6 26C7062000[D642]        	mov word [es:8*4],TimerISR
+   882 000049BD 268C0E2200              	mov word [es:8*4+2],cs
+   883 000049C2 FB                      	sti
+   884 000049C3 07                      	pop es
+   885 000049C4 58                      	pop ax
+   886 000049C5 C3                      	ret
+   887                                  
+   888                                  unhook:
+   889 000049C6 50                      	push ax
+   890 000049C7 06                      	push es
+   891 000049C8 B80000                  	mov ax,0
+   892 000049CB 8EC0                    	mov es,ax
+   893 000049CD A1[5F1F]                	mov ax,[oldkbisr]
+   894 000049D0 26A32400                	mov word [es:9*4],ax ;unhooking
+   895 000049D4 A1[611F]                	mov ax,[oldkbisr+2]
+   896 000049D7 26A32600                	mov word [es:9*4+2],ax
+   897 000049DB A1[631F]                	mov ax,[oldtimerisr]
+   898 000049DE 26A32000                	mov word [es:8*4],ax ;unhooking
+   899 000049E2 A1[651F]                	mov ax,[oldtimerisr+2]
+   900 000049E5 26A32200                	mov word [es:8*4+2],ax
+   901 000049E9 07                      	pop es
+   902 000049EA 58                      	pop ax
+   903 000049EB C3                      	ret
+   904                                  clscrn:
+   905 000049EC 60                      	pusha
+   906 000049ED B800B8                  	mov ax,0xb800
+   907 000049F0 FC                      	cld 
+   908 000049F1 8EC0                    	mov es, ax
+   909 000049F3 BF0000                  	mov di,0
+   910 000049F6 B82000                  	mov ax, 0x0020 
+   911 000049F9 B9D007                  	mov cx,2000
+   912 000049FC F3AB                    	rep stosw
+   913 000049FE 61                      	popa
+   914 000049FF C3                      	ret
+   915                                  PrintGround:
+   916 00004A00 60                      pusha
+   917 00004A01 FC                      cld
+   918 00004A02 1E                      push ds
+   919 00004A03 07                      pop es
+   920 00004A04 BF800C                  mov di,3200
+   921 00004A07 81C7[1F00]              add di,buffer
+   922                                  
+   923 00004A0B B90600                  	mov cx,6
+   924 00004A0E B82060                  	mov ax,0x6020
+   925 00004A11 F3AB                    	rep stosw
+   926 00004A13 B90900                  	mov cx,9
+   927 00004A16 B82F62                  	mov ax,0x622f
+   928 00004A19 F3AB                    	rep stosw
+   929 00004A1B B90500                  	mov cx,5
+   930 00004A1E B82060                  	mov ax,0x6020
+   931 00004A21 F3AB                    	rep stosw
+   932 00004A23 B90A00                  	mov cx,10
+   933 00004A26 B85C62                  	mov ax,0x625c
+   934 00004A29 F3AB                    	rep stosw
+   935 00004A2B B90500                  	mov cx,5
+   936 00004A2E B82060                  	mov ax,0x6020
+   937 00004A31 F3AB                    	rep stosw
+   938 00004A33 B90700                  	mov cx,7
+   939 00004A36 B82F62                  	mov ax,0x622f
+   940 00004A39 F3AB                    	rep stosw
+   941 00004A3B B90A00                  	mov cx,10
+   942 00004A3E B82060                  	mov ax,0x6020
+   943 00004A41 F3AB                    	rep stosw
+   944 00004A43 B90700                  	mov cx,7
+   945 00004A46 B82F62                  	mov ax,0x622f
+   946 00004A49 F3AB                    	rep stosw
+   947 00004A4B B90600                  	mov cx,6
+   948 00004A4E B82060                  	mov ax,0x6020
+   949 00004A51 F3AB                    	rep stosw
+   950 00004A53 B90B00                  	mov cx,11
+   951 00004A56 B85C62                  	mov ax,0x625c
+   952 00004A59 F3AB                    	rep stosw
+   953 00004A5B B90700                  	mov cx,7
+   954 00004A5E B82060                  	mov ax,0x6020
+   955 00004A61 F3AB                    	rep stosw
+   956 00004A63 B90300                  	mov cx,3
+   957 00004A66 B82F62                  	mov ax,0x622f
+   958 00004A69 F3AB                    	rep stosw
+   959 00004A6B B90600                  	mov cx,6
+   960 00004A6E B82060                  	mov ax,0x6020
+   961 00004A71 F3AB                    	rep stosw
+   962 00004A73 B90D00                  	mov cx,13
+   963 00004A76 B82060                  	mov ax,0x6020
+   964 00004A79 F3AB                    	rep stosw
+   965 00004A7B B90400                  	mov cx,4
+   966 00004A7E B82F62                  	mov ax,0x622f
+   967 00004A81 F3AB                    	rep stosw
+   968 00004A83 B90700                  	mov cx,7
+   969 00004A86 B82060                  	mov ax,0x6020
+   970 00004A89 F3AB                    	rep stosw
+   971 00004A8B B90600                  	mov cx,6
+   972 00004A8E B85C62                  	mov ax,0x625c
+   973 00004A91 F3AB                    	rep stosw
+   974 00004A93 B90C00                  	mov cx,12
+   975 00004A96 B82060                  	mov ax,0x6020
+   976 00004A99 F3AB                    	rep stosw
+   977 00004A9B B90D00                  	mov cx,13
+   978 00004A9E B82F62                  	mov ax,0x622f
+   979 00004AA1 F3AB                    	rep stosw
+   980 00004AA3 B90700                  	mov cx,7
+   981 00004AA6 B82060                  	mov ax,0x6020
+   982 00004AA9 F3AB                    	rep stosw
+   983 00004AAB B90500                  	mov cx,5
+   984 00004AAE B82F62                  	mov ax,0x622f
+   985 00004AB1 F3AB                    	rep stosw
+   986 00004AB3 B90800                  	mov cx,8
+   987 00004AB6 B82060                  	mov ax,0x6020
+   988 00004AB9 F3AB                    	rep stosw
+   989 00004ABB B90900                  	mov cx,9
+   990 00004ABE B85C62                  	mov ax,0x625c
+   991 00004AC1 F3AB                    	rep stosw
+   992 00004AC3 B90D00                  	mov cx,13
+   993 00004AC6 B82060                  	mov ax,0x6020
+   994 00004AC9 F3AB                    	rep stosw
+   995 00004ACB B90900                  	mov cx,9
+   996 00004ACE B82F62                  	mov ax,0x622f
+   997 00004AD1 F3AB                    	rep stosw
+   998 00004AD3 B90700                  	mov cx,7
+   999 00004AD6 B82060                  	mov ax,0x6020
+  1000 00004AD9 F3AB                    	rep stosw
+  1001                                  	
+  1002 00004ADB B90600                  	mov cx,6
+  1003 00004ADE B82060                  	mov ax,0x6020
+  1004 00004AE1 F3AB                    	rep stosw
+  1005 00004AE3 B90D00                  	mov cx,13
+  1006 00004AE6 B82060                  	mov ax,0x6020
+  1007 00004AE9 F3AB                    	rep stosw
+  1008 00004AEB B90400                  	mov cx,4
+  1009 00004AEE B82F62                  	mov ax,0x622f
+  1010 00004AF1 F3AB                    	rep stosw
+  1011 00004AF3 B90700                  	mov cx,7
+  1012 00004AF6 B82060                  	mov ax,0x6020
+  1013 00004AF9 F3AB                    	rep stosw
+  1014 00004AFB B90600                  	mov cx,6
+  1015 00004AFE B85C62                  	mov ax,0x625c
+  1016 00004B01 F3AB                    	rep stosw
+  1017 00004B03 B90C00                  	mov cx,12
+  1018 00004B06 B82060                  	mov ax,0x6020
+  1019 00004B09 F3AB                    	rep stosw
+  1020 00004B0B B90D00                  	mov cx,13
+  1021 00004B0E B82F62                  	mov ax,0x622f
+  1022 00004B11 F3AB                    	rep stosw
+  1023 00004B13 B90700                  	mov cx,7
+  1024 00004B16 B82060                  	mov ax,0x6020
+  1025 00004B19 F3AB                    	rep stosw
+  1026 00004B1B B90500                  	mov cx,5
+  1027 00004B1E B82F62                  	mov ax,0x622f
+  1028 00004B21 F3AB                    	rep stosw
+  1029 00004B23 B90800                  	mov cx,8
+  1030 00004B26 B82060                  	mov ax,0x6020
+  1031 00004B29 F3AB                    	rep stosw
+  1032                                  	
+  1033 00004B2B B90600                  	mov cx,6
+  1034 00004B2E B82060                  	mov ax,0x6020
+  1035 00004B31 F3AB                    	rep stosw
+  1036 00004B33 B90900                  	mov cx,9
+  1037 00004B36 B82F62                  	mov ax,0x622f
+  1038 00004B39 F3AB                    	rep stosw
+  1039 00004B3B B90500                  	mov cx,5
+  1040 00004B3E B82060                  	mov ax,0x6020
+  1041 00004B41 F3AB                    	rep stosw
+  1042 00004B43 B90A00                  	mov cx,10
+  1043 00004B46 B85C62                  	mov ax,0x625c
+  1044 00004B49 F3AB                    	rep stosw
+  1045 00004B4B B90500                  	mov cx,5
+  1046 00004B4E B82060                  	mov ax,0x6020
+  1047 00004B51 F3AB                    	rep stosw
+  1048 00004B53 B90700                  	mov cx,7
+  1049 00004B56 B82F62                  	mov ax,0x622f
+  1050 00004B59 F3AB                    	rep stosw
+  1051 00004B5B B90A00                  	mov cx,10
+  1052 00004B5E B82060                  	mov ax,0x6020
+  1053 00004B61 F3AB                    	rep stosw
+  1054 00004B63 B90700                  	mov cx,7
+  1055 00004B66 B82F62                  	mov ax,0x622f
+  1056 00004B69 F3AB                    	rep stosw
+  1057 00004B6B B90600                  	mov cx,6
+  1058 00004B6E B82060                  	mov ax,0x6020
+  1059 00004B71 F3AB                    	rep stosw
+  1060 00004B73 B90B00                  	mov cx,11
+  1061 00004B76 B85C62                  	mov ax,0x625c
+  1062 00004B79 F3AB                    	rep stosw
+  1063 00004B7B B90700                  	mov cx,7
+  1064 00004B7E B82060                  	mov ax,0x6020
+  1065 00004B81 F3AB                    	rep stosw
+  1066 00004B83 B90300                  	mov cx,3
+  1067 00004B86 B82F62                  	mov ax,0x622f
+  1068 00004B89 F3AB                    	rep stosw
+  1069 00004B8B B90600                  	mov cx,6
+  1070 00004B8E B82060                  	mov ax,0x6020
+  1071 00004B91 F3AB                    	rep stosw
+  1072 00004B93 B90D00                  	mov cx,13
+  1073 00004B96 B82060                  	mov ax,0x6020
+  1074 00004B99 F3AB                    	rep stosw
+  1075 00004B9B B90400                  	mov cx,4
+  1076 00004B9E B82F62                  	mov ax,0x622f
+  1077 00004BA1 F3AB                    	rep stosw
+  1078 00004BA3 B90500                  	mov cx,5
+  1079 00004BA6 B82062                  	mov ax,0x6220
+  1080 00004BA9 F3AB                    	rep stosw
+  1081                                  
+  1082 00004BAB 61                      popa
+  1083 00004BAC C3                      ret
+  1084                                  
+  1085                                  PrintPillar:
+  1086 00004BAD 55                      	push bp
+  1087 00004BAE 89E5                    	mov bp,sp
+  1088 00004BB0 60                      	pusha
+  1089 00004BB1 1E                      	push ds
+  1090 00004BB2 07                      	pop es
+  1091 00004BB3 B85000                  	mov ax,80
+  1092 00004BB6 F76608                  	mul word [bp+8]
+  1093 00004BB9 03460A                  	add ax,[bp+10]
+  1094 00004BBC D1E0                    	shl ax,1
+  1095 00004BBE 89C7                    	mov di,ax
+  1096 00004BC0 81C7[1F00]              	add di,buffer
+  1097 00004BC4 B82020                  	mov ax, 0x2020
+  1098 00004BC7 837E0A00                	cmp word [bp+10],0 
+  1099 00004BCB 7C17                    	jl skip
+  1100 00004BCD 8B4E06                  	mov cx,[bp+6]
+  1101                                  	LoopPillar:
+  1102 00004BD0 268905                  	mov [es:di],ax
+  1103 00004BD3 81C7A000                	add di,160
+  1104 00004BD7 E2F7                    	loop LoopPillar
+  1105 00004BD9 B8A000                  	mov ax,160
+  1106 00004BDC F76606                  	mul word [bp+6]
+  1107 00004BDF 29C7                    	sub di,ax
+  1108 00004BE1 B82020                  	mov ax, 0x2020
+  1109                                  	skip:
+  1110 00004BE4 83C702                  	add di,2
+  1111 00004BE7 837E0AFF                	cmp word [bp+10],-1
+  1112 00004BEB 7C1D                    	jl skip1
+  1113 00004BED 837E0A4E                	cmp word [bp+10],78
+  1114 00004BF1 7F17                    	jg skip1
+  1115 00004BF3 8B4E06                  	mov cx,[bp+6]
+  1116                                  	LoopPillar1:
+  1117 00004BF6 268905                  	mov [es:di],ax
+  1118 00004BF9 81C7A000                	add di,160
+  1119 00004BFD E2F7                    	loop LoopPillar1
+  1120 00004BFF B8A000                  	mov ax,160
+  1121 00004C02 F76606                  	mul word [bp+6]
+  1122 00004C05 29C7                    	sub di,ax
+  1123 00004C07 B82020                  	mov ax, 0x2020
+  1124                                  	skip1:
+  1125 00004C0A 83C702                  	add di,2
+  1126 00004C0D 837E0AFE                	cmp word [bp+10],-2
+  1127 00004C11 7C1D                    	jl skip2
+  1128 00004C13 837E0A4D                	cmp word [bp+10],77
+  1129 00004C17 7F17                    	jg skip2
+  1130 00004C19 8B4E06                  	mov cx,[bp+6]
+  1131                                  	LoopPillar2:
+  1132 00004C1C 268905                  	mov [es:di],ax
+  1133 00004C1F 81C7A000                	add di,160
+  1134 00004C23 E2F7                    	loop LoopPillar2
+  1135 00004C25 B8A000                  	mov ax,160
+  1136 00004C28 F76606                  	mul word [bp+6]
+  1137 00004C2B 29C7                    	sub di,ax
+  1138 00004C2D B82020                  	mov ax, 0x2020
+  1139                                  	skip2:
+  1140 00004C30 83C702                  	add di,2
+  1141 00004C33 837E0A4C                	cmp word [bp+10],76
+  1142 00004C37 7F0C                    	jg skip3
+  1143 00004C39 8B4E06                  	mov cx,[bp+6]
+  1144                                  	LoopPillar3:
+  1145 00004C3C 268905                  	mov [es:di],ax
+  1146 00004C3F 81C7A000                	add di,160
+  1147 00004C43 E2F7                    	loop LoopPillar3
+  1148                                  	skip3:
+  1149                                  	
+  1150 00004C45 61                      	popa
+  1151 00004C46 5D                      	pop bp
+  1152 00004C47 C20800                  	ret 8
+  1153                                  	
+  1154                                  PrintClouds:
+  1155 00004C4A 6A04                    	push word 4
+  1156 00004C4C 6A04                    	push word 4
+  1157 00004C4E E81600                  	call PrintCloud
+  1158                                  	
+  1159 00004C51 6A07                    	push word 7
+  1160 00004C53 6A15                    	push word 21
+  1161 00004C55 E80F00                  	call PrintCloud
+  1162                                  	
+  1163 00004C58 6A05                    	push word 5
+  1164 00004C5A 6A2D                    	push word 45
+  1165 00004C5C E80800                  	call PrintCloud
+  1166                                  	
+  1167 00004C5F 6A03                    	push word 3
+  1168 00004C61 6A43                    	push word 67
+  1169 00004C63 E80100                  	call PrintCloud
+  1170 00004C66 C3                      	ret
+  1171                                  
+  1172                                  PrintCloud:
+  1173 00004C67 55                      	push bp
+  1174 00004C68 89E5                    	mov bp,sp
+  1175 00004C6A 60                      	pusha
+  1176 00004C6B 1E                      	push ds 
+  1177 00004C6C 07                      	pop es
+  1178 00004C6D B80000                  	mov ax,0
+  1179 00004C70 B050                    	mov al,80
+  1180 00004C72 F76606                  	mul word [bp+6]
+  1181 00004C75 034604                  	add ax, [bp+4]
+  1182 00004C78 D1E0                    	shl ax,1
+  1183 00004C7A 89C7                    	mov di,ax
+  1184 00004C7C 81C7[1F00]              	add di,buffer
+  1185 00004C80 B8DB0F                  	mov ax,0x0fdb
+  1186 00004C83 B90A00                  	mov cx,10
+  1187 00004C86 FC                      	cld 
+  1188 00004C87 F3AB                    	rep stosw
+  1189 00004C89 81EFA600                	sub di,166
+  1190 00004C8D B90600                  	mov cx,6
+  1191 00004C90 FD                      	std
+  1192 00004C91 F3AB                    	rep stosw
+  1193 00004C93 61                      	popa
+  1194 00004C94 5D                      	pop bp
+  1195 00004C95 C20400                  	ret 4
+  1196                                  	
+  1197                                  PrintCloudTitle:
+  1198 00004C98 55                      	push bp
+  1199 00004C99 89E5                    	mov bp,sp
+  1200 00004C9B 06                      	push es
+  1201 00004C9C 60                      	pusha
+  1202 00004C9D B800B8                  	mov ax,0xb800
+  1203 00004CA0 8EC0                    	mov es,ax
+  1204 00004CA2 B80000                  	mov ax,0
+  1205 00004CA5 B050                    	mov al,80
+  1206 00004CA7 F76606                  	mul word [bp+6]
+  1207 00004CAA 034604                  	add ax, [bp+4]
+  1208 00004CAD D1E0                    	shl ax,1
+  1209 00004CAF 89C7                    	mov di,ax
+  1210 00004CB1 B8DB0F                  	mov ax,0x0fdb
+  1211 00004CB4 B90A00                  	mov cx,10
+  1212 00004CB7 FC                      	cld 
+  1213 00004CB8 F3AB                    	rep stosw
+  1214 00004CBA 81EFA600                	sub di,166
+  1215 00004CBE B90600                  	mov cx,6
+  1216 00004CC1 FD                      	std
+  1217 00004CC2 F3AB                    	rep stosw
+  1218 00004CC4 61                      	popa
+  1219 00004CC5 07                      	pop es
+  1220 00004CC6 5D                      	pop bp
+  1221 00004CC7 C20400                  	ret 4	
+  1222                                  	
+  1223                                  DisplayScore:
+  1224 00004CCA 60                      pusha
+  1225 00004CCB 06                      push es
+  1226                                  
+  1227 00004CCC A1[7421]                mov ax,[Score] 
+  1228 00004CCF B90000                  mov cx,0
+  1229 00004CD2 BB0A00                  mov bx,10
+  1230 00004CD5 BE[7821]                mov si,ScoreBuffer
+  1231                                  lop2:
+  1232 00004CD8 BA0000                  mov dx,0 
+  1233 00004CDB F7F3                    div bx
+  1234 00004CDD 80C230                  add dl,'0'
+  1235 00004CE0 8814                    mov byte [si],dl
+  1236 00004CE2 46                      inc si
+  1237 00004CE3 41                      inc cx
+  1238 00004CE4 83F800                  cmp ax,0
+  1239 00004CE7 7FEF                    jg lop2
+  1240                                  
+  1241 00004CE9 4E                      dec si
+  1242 00004CEA 1E                      push ds
+  1243 00004CEB 07                      pop es
+  1244 00004CEC BF[1F00]                mov di,buffer
+  1245                                  displayscoreloop:
+  1246 00004CEF 268B05                  mov ax,[es:di]
+  1247 00004CF2 80CC00                  or ah,00000000b
+  1248 00004CF5 FD                      std
+  1249 00004CF6 AC                      lodsb
+  1250 00004CF7 FC                      cld
+  1251 00004CF8 AB                      stosw
+  1252 00004CF9 E2F4                    loop displayscoreloop
+  1253                                  
+  1254 00004CFB 07                      pop es
+  1255 00004CFC 61                      popa
+  1256 00004CFD C3                      ret
+  1257                                  
+  1258                                  MoveGround:
+  1259 00004CFE 60                      pusha
+  1260 00004CFF 1E                      push ds
+  1261 00004D00 833E[7021]01            cmp word [DeathFlag],1
+  1262 00004D05 7444                    je endmoveground
+  1263 00004D07 833E[7221]01            cmp word [PauseFlag],1
+  1264 00004D0C 743D                    je endmoveground
+  1265 00004D0E FF06[6B1F]              inc word [loopcount+2]
+  1266 00004D12 833E[6B1F]02            cmp word [loopcount+2],2
+  1267 00004D17 7532                    jne endmoveground
+  1268 00004D19 C706[6B1F]0000          mov word [loopcount+2],0
+  1269 00004D1F 1E                      push ds
+  1270 00004D20 07                      pop es
+  1271 00004D21 BB1400                  mov bx,20
+  1272                                  	
+  1273                                  Rotate:
+  1274 00004D24 B85000                  	mov ax,80
+  1275 00004D27 F7E3                    	mul bx
+  1276 00004D29 83C04F                  	add ax,79
+  1277 00004D2C D1E0                    	shl ax,1
+  1278 00004D2E 89C6                    	mov si,ax
+  1279 00004D30 81C6[1F00]              	add si,buffer
+  1280 00004D34 3EFF34                  	push word [ds:si]
+  1281 00004D37 89F7                    	mov di,si 
+  1282 00004D39 83EE02                  	sub si,2
+  1283 00004D3C B94F00                  	mov cx,79
+  1284 00004D3F FD                      	std
+  1285 00004D40 F3A5                    	rep movsw
+  1286 00004D42 268F05                  	pop word[es:di]
+  1287 00004D45 43                      inc bx
+  1288 00004D46 83FB19                  cmp bx,25
+  1289 00004D49 7CD9                    jl Rotate
+  1290                                  endmoveground:
+  1291 00004D4B 1F                      pop ds
+  1292 00004D4C 61                      popa
+  1293 00004D4D C3                      ret
+  1294                                  
+  1295                                  PrintBackground: 
+  1296 00004D4E 60                      	pusha
+  1297 00004D4F FC                      	cld 
+  1298 00004D50 1E                      	push ds
+  1299 00004D51 07                      	pop es
+  1300 00004D52 BF[1F00]                	mov di,buffer
+  1301 00004D55 B82030                  	mov ax, 0x3020 
+  1302 00004D58 B94006                  	mov cx,1600
+  1303                                  	;cyan bg
+  1304 00004D5B F3AB                    	rep stosw 
+  1305 00004D5D E8EAFE                  	call PrintClouds
+  1306 00004D60 61                      	popa
+  1307 00004D61 C3                      	ret
+  1308                                  	
+  1309                                  Rand:
+  1310 00004D62 55                      	push bp
+  1311 00004D63 89E5                    	mov bp,sp
+  1312 00004D65 60                      	pusha
+  1313                                  
+  1314 00004D66 B400                        mov ah,00h 
+  1315 00004D68 CD1A                        int 1ah         
+  1316 00004D6A 89D0                        mov ax, dx
+  1317 00004D6C BA0000                      mov dx, 0    
+  1318 00004D6F F77604                      div word [bp+4]
+  1319 00004D72 895606                      mov [bp+6],dx
+  1320                                    
+  1321 00004D75 61                      	popa
+  1322 00004D76 5D                      	pop bp
+  1323 00004D77 C20200                  	ret 2
+  1324                                  	
+  1325                                  CopyBuffer:
+  1326 00004D7A 60                      	pusha       
+  1327 00004D7B 1E                      	push ds
+  1328 00004D7C BE[1F00]                	mov si, buffer    
+  1329 00004D7F BF0000                  	mov di, 0         
+  1330 00004D82 B9D007                  	mov cx, 2000   
+  1331 00004D85 BB00B8                  	mov bx,0xb800
+  1332 00004D88 8EC3                    	mov es,bx
+  1333 00004D8A FC                      	cld 
+  1334 00004D8B F3A5                    	rep movsw
+  1335 00004D8D 1F                      	pop ds
+  1336 00004D8E 61                      	popa
+  1337 00004D8F C3                      	ret
+  1338                                  	
+  1339                                  PrintBirbTitle:
+  1340 00004D90 55                      	push bp
+  1341 00004D91 89E5                    	mov bp,sp
+  1342 00004D93 60                      	pusha
+  1343 00004D94 B80000                  	mov ax,0
+  1344 00004D97 B050                    	mov al,80
+  1345 00004D99 F76606                  	mul word [bp+6]
+  1346 00004D9C 034604                  	add ax, [bp+4]
+  1347 00004D9F D1E0                    	shl ax,1
+  1348 00004DA1 89C7                    	mov di,ax
+  1349                                  	
+  1350 00004DA3 B800B8                  	mov ax,0xb800
+  1351 00004DA6 8EC0                    	mov es,ax
+  1352 00004DA8 268B05                  	mov ax,[es:di]
+  1353 00004DAB B03D                    	mov al,'='
+  1354 00004DAD 268905                  	mov word [es:di],ax
+  1355 00004DB0 83C702                  	add di,2
+  1356 00004DB3 268B05                  	mov ax,[es:di]
+  1357 00004DB6 B03D                    	mov al,'='
+  1358 00004DB8 268905                  	mov word [es:di],ax
+  1359 00004DBB 83C702                  	add di,2
+  1360 00004DBE 26C705DB0E              	mov word [es:di],0x0edb
+  1361 00004DC3 81EFA000                	sub di,160
+  1362 00004DC7 26C705DB0E              	mov word [es:di],0x0edb
+  1363 00004DCC 83C702                  	add di,2
+  1364 00004DCF 26C705DB0E              	mov word [es:di],0x0edb
+  1365 00004DD4 81C7A000                	add di,160
+  1366 00004DD8 26C705DB0E              	mov word [es:di],0x0edb
+  1367 00004DDD 83C702                  	add di,2
+  1368 00004DE0 26C705DB0E              	mov word [es:di],0x0edb
+  1369 00004DE5 81EFA000                	sub di,160
+  1370 00004DE9 26C705DB0E              	mov word [es:di],0x0edb
+  1371 00004DEE 83C702                  	add di,2
+  1372 00004DF1 26C7055E78              	mov word [es:di],0x785e
+  1373 00004DF6 81C7A000                	add di,160
+  1374 00004DFA 26C7053D4F              	mov word [es:di],0x4f3d
+  1375 00004DFF 83C702                  	add di,2
+  1376 00004E02 26C7053D4F              	mov word [es:di],0x4f3d
+  1377 00004E07 61                      	popa
+  1378 00004E08 5D                      	pop bp
+  1379 00004E09 C20400                  	ret 4
+  1380                                  	
+  1381                                  ClearBirbTitle:
+  1382 00004E0C 55                      	push bp
+  1383 00004E0D 89E5                    	mov bp,sp
+  1384 00004E0F 60                      	pusha
+  1385 00004E10 B80000                  	mov ax,0
+  1386 00004E13 B050                    	mov al,80
+  1387 00004E15 F76606                  	mul word [bp+6]
+  1388 00004E18 034604                  	add ax, [bp+4]
+  1389 00004E1B D1E0                    	shl ax,1
+  1390 00004E1D 89C7                    	mov di,ax
+  1391                                  	
+  1392 00004E1F B800B8                  	mov ax,0xb800
+  1393 00004E22 8EC0                    	mov es,ax
+  1394 00004E24 B82030                  	mov ax,0x3020
+  1395 00004E27 57                      	push di
+  1396 00004E28 FC                      	cld 
+  1397 00004E29 B90700                  	mov cx,7
+  1398 00004E2C F3AB                    	rep stosw
+  1399 00004E2E 5F                      	pop di
+  1400 00004E2F 81EFA000                	sub di,160
+  1401 00004E33 B90700                  	mov cx,7
+  1402 00004E36 F3AB                    	rep stosw
+  1403 00004E38 61                      	popa
+  1404 00004E39 5D                      	pop bp
+  1405 00004E3A C20400                  	ret 4
+  1406                                  	
+  1407                                  PrintBirb:
+  1408 00004E3D 60                      	pusha
+  1409 00004E3E B80000                  	mov ax,0
+  1410 00004E41 B050                    	mov al,80
+  1411 00004E43 F726[1B00]              	mul word [birdrow]
+  1412 00004E47 83C024                  	add ax, 36
+  1413 00004E4A D1E0                    	shl ax,1
+  1414 00004E4C 89C7                    	mov di,ax
+  1415 00004E4E 81C7[1F00]              	add di,buffer
+  1416                                  	
+  1417 00004E52 1E                      	push ds
+  1418 00004E53 07                      	pop es
+  1419 00004E54 268B05                  	mov ax,[es:di]
+  1420 00004E57 B03D                    	mov al,'='
+  1421 00004E59 268905                  	mov word [es:di],ax
+  1422 00004E5C 83C702                  	add di,2
+  1423 00004E5F 268B05                  	mov ax,[es:di]
+  1424 00004E62 B03D                    	mov al,'='
+  1425 00004E64 268905                  	mov word [es:di],ax
+  1426 00004E67 83C702                  	add di,2
+  1427 00004E6A 26C705DB0E              	mov word [es:di],0x0edb
+  1428 00004E6F 81EFA000                	sub di,160
+  1429 00004E73 26C705DB0E              	mov word [es:di],0x0edb
+  1430 00004E78 83C702                  	add di,2
+  1431 00004E7B 26C705DB0E              	mov word [es:di],0x0edb
+  1432 00004E80 81C7A000                	add di,160
+  1433 00004E84 26C705DB0E              	mov word [es:di],0x0edb
+  1434 00004E89 83C702                  	add di,2
+  1435 00004E8C 26C705DB0E              	mov word [es:di],0x0edb
+  1436 00004E91 81EFA000                	sub di,160
+  1437 00004E95 26C705DB0E              	mov word [es:di],0x0edb
+  1438 00004E9A 83C702                  	add di,2
+  1439 00004E9D 833E[7021]00            	cmp word [DeathFlag],0
+  1440 00004EA2 7507                    	jne ahead13
+  1441 00004EA4 26C7055E78              	mov word [es:di],0x785e
+  1442 00004EA9 EB05                    	jmp ahead14
+  1443                                  	ahead13:
+  1444 00004EAB 26C7057878              	mov word [es:di],0x7878
+  1445                                  	ahead14:
+  1446 00004EB0 81C7A000                	add di,160
+  1447 00004EB4 26C7053D4F              	mov word [es:di],0x4f3d
+  1448 00004EB9 83C702                  	add di,2
+  1449 00004EBC 26C7053D4F              	mov word [es:di],0x4f3d
+  1450                                  	
+  1451 00004EC1 61                      	popa
+  1452 00004EC2 C3                      	ret 
+  1453                                  
+  1454                                  TitleScreen:
+  1455 00004EC3 60                      	pusha
+  1456 00004EC4 06                      	push es
+  1457 00004EC5 B800B8                  	mov ax,0xb800
+  1458 00004EC8 8EC0                    	mov es,ax
+  1459 00004ECA B82030                  	mov ax,0x3020
+  1460 00004ECD B9D007                  	mov cx,2000
+  1461 00004ED0 BF0000                  	mov di,0
+  1462 00004ED3 FC                      	cld
+  1463 00004ED4 F3AB                    	rep stosw 
+  1464 00004ED6 6A0F                    	push word 15
+  1465 00004ED8 6A17                    	push word 23
+  1466 00004EDA E8BBFD                  	call PrintCloudTitle
+  1467 00004EDD 6A04                    	push word 4
+  1468 00004EDF 6A41                    	push word 65
+  1469 00004EE1 E8B4FD                  	call PrintCloudTitle
+  1470 00004EE4 6A01                    	push word 1
+  1471 00004EE6 6A1E                    	push word 30
+  1472 00004EE8 E8ADFD                  	call PrintCloudTitle
+  1473 00004EEB 6A14                    	push word 20
+  1474 00004EED 6A32                    	push word 50
+  1475 00004EEF E8A6FD                  	call PrintCloudTitle
+  1476 00004EF2 6A12                    	push word 18
+  1477 00004EF4 6A02                    	push word 2
+  1478 00004EF6 E89FFD                  	call PrintCloudTitle
+  1479 00004EF9 6A0C                    	push word 12
+  1480 00004EFB 6A44                    	push word 68
+  1481 00004EFD E898FD                  	call PrintCloudTitle
+  1482 00004F00 6A05                    	push word 5
+  1483 00004F02 6A04                    	push word 4
+  1484 00004F04 E891FD                  	call PrintCloudTitle
+  1485 00004F07 FC                      	cld
+  1486 00004F08 B46E                    	mov ah,01101110b
+  1487 00004F0A B0DB                    	mov al,0xdb
+  1488 00004F0C BFF401                  	mov di,500
+  1489 00004F0F B90500                  	mov cx,5
+  1490 00004F12 F3AB                    	rep stosw
+  1491 00004F14 BF9402                  	mov di,660
+  1492 00004F17 B90200                  	mov cx,2
+  1493 00004F1A F3AB                    	rep stosw
+  1494 00004F1C BF3403                  	mov di,820
+  1495 00004F1F B90500                  	mov cx,5
+  1496 00004F22 F3AB                    	rep stosw
+  1497 00004F24 BFD403                  	mov di,980
+  1498 00004F27 B90200                  	mov cx,2
+  1499 00004F2A F3AB                    	rep stosw
+  1500 00004F2C BF7404                  	mov di,1140
+  1501 00004F2F B90200                  	mov cx,2
+  1502 00004F32 F3AB                    	rep stosw
+  1503 00004F34 BF9E02                  	mov di,670
+  1504 00004F37 E833F8                  	call delay
+  1505 00004F3A E830F8                  	call delay
+  1506 00004F3D E82DF8                  	call delay
+  1507 00004F40 E82AF8                  	call delay
+  1508 00004F43 B40C                    	mov ah,00001100b
+  1509 00004F45 268905                  	mov [es:di],ax
+  1510 00004F48 81C7A000                	add di,160
+  1511 00004F4C 268905                  	mov [es:di],ax
+  1512 00004F4F 81C7A000                	add di,160
+  1513 00004F53 268905                  	mov [es:di],ax
+  1514 00004F56 81C7A000                	add di,160
+  1515 00004F5A 268905                  	mov [es:di],ax
+  1516 00004F5D 81C7A000                	add di,160
+  1517 00004F61 268905                  	mov [es:di],ax
+  1518 00004F64 81C7A000                	add di,160
+  1519 00004F68 BFA002                  	mov di,672
+  1520 00004F6B 268905                  	mov [es:di],ax
+  1521 00004F6E 81C7A000                	add di,160
+  1522 00004F72 268905                  	mov [es:di],ax
+  1523 00004F75 81C7A000                	add di,160
+  1524 00004F79 268905                  	mov [es:di],ax
+  1525 00004F7C 81C7A000                	add di,160
+  1526 00004F80 268905                  	mov [es:di],ax
+  1527 00004F83 81C7A000                	add di,160
+  1528 00004F87 268905                  	mov [es:di],ax
+  1529 00004F8A 83C702                  	add di,2
+  1530 00004F8D B90400                  	mov cx,4
+  1531 00004F90 F3AB                    	rep stosw
+  1532 00004F92 81EFA400                	sub di,164
+  1533 00004F96 57                      	push di
+  1534 00004F97 E8D3F7                  	call delay
+  1535 00004F9A E8D0F7                  	call delay
+  1536 00004F9D E8CDF7                  	call delay
+  1537 00004FA0 E8CAF7                  	call delay
+  1538 00004FA3 B40E                    	mov ah,00001110b
+  1539 00004FA5 268905                  	mov [es:di],ax
+  1540 00004FA8 81EFA000                	sub di,160
+  1541 00004FAC 268905                  	mov [es:di],ax
+  1542 00004FAF 81EFA000                	sub di,160
+  1543 00004FB3 268905                  	mov [es:di],ax
+  1544 00004FB6 81EFA000                	sub di,160
+  1545 00004FBA 268905                  	mov [es:di],ax
+  1546 00004FBD 81EFA000                	sub di,160
+  1547 00004FC1 268905                  	mov [es:di],ax
+  1548 00004FC4 5F                      	pop di
+  1549 00004FC5 83C702                  	add di,2
+  1550 00004FC8 268905                  	mov [es:di],ax
+  1551 00004FCB 81EFA000                	sub di,160
+  1552 00004FCF 268905                  	mov [es:di],ax
+  1553 00004FD2 81EFA000                	sub di,160
+  1554 00004FD6 268905                  	mov [es:di],ax
+  1555 00004FD9 81EFA000                	sub di,160
+  1556 00004FDD 268905                  	mov [es:di],ax
+  1557 00004FE0 81EFA000                	sub di,160
+  1558 00004FE4 268905                  	mov [es:di],ax
+  1559 00004FE7 B90400                  	mov cx,4
+  1560 00004FEA F3AB                    	rep stosw
+  1561 00004FEC 57                      	push di
+  1562 00004FED 268905                  	mov [es:di],ax
+  1563 00004FF0 81C7A000                	add di,160
+  1564 00004FF4 268905                  	mov [es:di],ax
+  1565 00004FF7 81C7A000                	add di,160
+  1566 00004FFB 268905                  	mov [es:di],ax
+  1567 00004FFE 81C7A000                	add di,160
+  1568 00005002 268905                  	mov [es:di],ax
+  1569 00005005 81C7A000                	add di,160
+  1570 00005009 268905                  	mov [es:di],ax
+  1571 0000500C 5F                      	pop di
+  1572 0000500D 83C702                  	add di,2
+  1573 00005010 268905                  	mov [es:di],ax
+  1574 00005013 81C7A000                	add di,160
+  1575 00005017 268905                  	mov [es:di],ax
+  1576 0000501A 81C7A000                	add di,160
+  1577 0000501E 268905                  	mov [es:di],ax
+  1578 00005021 81C7A000                	add di,160
+  1579 00005025 268905                  	mov [es:di],ax
+  1580 00005028 81C7A000                	add di,160
+  1581 0000502C 268905                  	mov [es:di],ax
+  1582 0000502F B90500                  	mov cx,5
+  1583 00005032 FD                      	std
+  1584 00005033 F3AB                    	rep stosw
+  1585 00005035 BFB402                  	mov di,692
+  1586 00005038 57                      	push di
+  1587 00005039 E831F7                  	call delay
+  1588 0000503C E82EF7                  	call delay
+  1589 0000503F E82BF7                  	call delay
+  1590 00005042 E828F7                  	call delay
+  1591 00005045 B40C                    	mov ah,00001100b
+  1592 00005047 B90500                  	mov cx,5
+  1593 0000504A FC                      	cld
+  1594 0000504B F3AB                    	rep stosw
+  1595 0000504D 81C79E00                	add di,158
+  1596 00005051 AB                      	stosw
+  1597 00005052 81C79E00                	add di,158
+  1598 00005056 AB                      	stosw
+  1599 00005057 5F                      	pop di
+  1600 00005058 81C7A000                	add di,160
+  1601 0000505C 57                      	push di
+  1602 0000505D B90200                  	mov cx,2
+  1603 00005060 F3AB                    	rep stosw
+  1604 00005062 5F                      	pop di
+  1605 00005063 81C7A000                	add di,160
+  1606 00005067 57                      	push di
+  1607 00005068 B90500                  	mov cx,5
+  1608 0000506B FC                      	cld
+  1609 0000506C F3AB                    	rep stosw
+  1610 0000506E 5F                      	pop di
+  1611 0000506F 81C7A000                	add di,160
+  1612 00005073 57                      	push di
+  1613 00005074 B90200                  	mov cx,2
+  1614 00005077 F3AB                    	rep stosw
+  1615 00005079 5F                      	pop di
+  1616 0000507A 81C7A000                	add di,160
+  1617 0000507E B90200                  	mov cx,2
+  1618 00005081 F3AB                    	rep stosw
+  1619 00005083 BF1E02                  	mov di,542
+  1620 00005086 57                      	push di
+  1621 00005087 E8E3F6                  	call delay
+  1622 0000508A E8E0F6                  	call delay
+  1623 0000508D E8DDF6                  	call delay
+  1624 00005090 E8DAF6                  	call delay
+  1625 00005093 B40E                    	mov ah,00001110b
+  1626 00005095 B90500                  	mov cx,5
+  1627 00005098 FC                      	cld
+  1628 00005099 F3AB                    	rep stosw
+  1629 0000509B 81C79E00                	add di,158
+  1630 0000509F AB                      	stosw
+  1631 000050A0 81C79E00                	add di,158
+  1632 000050A4 AB                      	stosw
+  1633 000050A5 5F                      	pop di
+  1634 000050A6 81C7A000                	add di,160
+  1635 000050AA 57                      	push di
+  1636 000050AB B90200                  	mov cx,2
+  1637 000050AE F3AB                    	rep stosw
+  1638 000050B0 5F                      	pop di
+  1639 000050B1 81C7A000                	add di,160
+  1640 000050B5 57                      	push di
+  1641 000050B6 B90500                  	mov cx,5
+  1642 000050B9 FC                      	cld
+  1643 000050BA F3AB                    	rep stosw
+  1644 000050BC 5F                      	pop di
+  1645 000050BD 81C7A000                	add di,160
+  1646 000050C1 57                      	push di
+  1647 000050C2 B90200                  	mov cx,2
+  1648 000050C5 F3AB                    	rep stosw
+  1649 000050C7 5F                      	pop di
+  1650 000050C8 81C7A000                	add di,160
+  1651 000050CC B90200                  	mov cx,2
+  1652 000050CF F3AB                    	rep stosw
+  1653 000050D1 BFC802                  	mov di,712
+  1654 000050D4 E896F6                  	call delay
+  1655 000050D7 E893F6                  	call delay
+  1656 000050DA E890F6                  	call delay
+  1657 000050DD E88DF6                  	call delay
+  1658 000050E0 B40C                    	mov ah,00001100b
+  1659 000050E2 268905                  	mov [es:di],ax
+  1660 000050E5 81C7A000                	add di,160
+  1661 000050E9 268905                  	mov [es:di],ax
+  1662 000050EC 81C7A000                	add di,160
+  1663 000050F0 268905                  	mov [es:di],ax
+  1664 000050F3 BFCA02                  	mov di,714
+  1665 000050F6 268905                  	mov [es:di],ax
+  1666 000050F9 81C7A000                	add di,160
+  1667 000050FD 268905                  	mov [es:di],ax
+  1668 00005100 81C7A000                	add di,160
+  1669 00005104 268905                  	mov [es:di],ax
+  1670 00005107 83C702                  	add di,2
+  1671 0000510A 57                      	push di
+  1672 0000510B AB                      	stosw
+  1673 0000510C 57                      	push di
+  1674 0000510D 268905                  	mov [es:di],ax
+  1675 00005110 81EFA000                	sub di,160
+  1676 00005114 268905                  	mov [es:di],ax
+  1677 00005117 81EFA000                	sub di,160
+  1678 0000511B 268905                  	mov [es:di],ax
+  1679 0000511E 5F                      	pop di
+  1680 0000511F 83C702                  	add di,2
+  1681 00005122 268905                  	mov [es:di],ax
+  1682 00005125 81EFA000                	sub di,160
+  1683 00005129 268905                  	mov [es:di],ax
+  1684 0000512C 81EFA000                	sub di,160
+  1685 00005130 268905                  	mov [es:di],ax
+  1686 00005133 5F                      	pop di
+  1687 00005134 81C7A000                	add di,160
+  1688 00005138 AB                      	stosw
+  1689 00005139 81C79E00                	add di,158
+  1690 0000513D AB                      	stosw
+  1691 0000513E BF0A09                  	mov di,2314
+  1692 00005141 57                      	push di
+  1693 00005142 E828F6                  	call delay
+  1694 00005145 E825F6                  	call delay
+  1695 00005148 E822F6                  	call delay
+  1696 0000514B E81FF6                  	call delay
+  1697 0000514E B40E                    	mov ah,00001110b
+  1698 00005150 268905                  	mov [es:di],ax
+  1699 00005153 81EFA000                	sub di,160
+  1700 00005157 268905                  	mov [es:di],ax
+  1701 0000515A 81EFA000                	sub di,160
+  1702 0000515E 268905                  	mov [es:di],ax
+  1703 00005161 81EFA000                	sub di,160
+  1704 00005165 268905                  	mov [es:di],ax
+  1705 00005168 81EFA000                	sub di,160
+  1706 0000516C 268905                  	mov [es:di],ax
+  1707 0000516F 5F                      	pop di
+  1708 00005170 83C702                  	add di,2
+  1709 00005173 268905                  	mov [es:di],ax
+  1710 00005176 81EFA000                	sub di,160
+  1711 0000517A 268905                  	mov [es:di],ax
+  1712 0000517D 81EFA000                	sub di,160
+  1713 00005181 268905                  	mov [es:di],ax
+  1714 00005184 81EFA000                	sub di,160
+  1715 00005188 268905                  	mov [es:di],ax
+  1716 0000518B 81EFA000                	sub di,160
+  1717 0000518F 268905                  	mov [es:di],ax
+  1718 00005192 B90400                  	mov cx,4
+  1719 00005195 F3AB                    	rep stosw	
+  1720 00005197 57                      	push di
+  1721 00005198 26C7052030              	mov word [es:di],0x3020
+  1722 0000519D 81C7A000                	add di,160
+  1723 000051A1 268905                  	mov [es:di],ax
+  1724 000051A4 81C7A000                	add di,160
+  1725 000051A8 268905                  	mov [es:di],ax
+  1726 000051AB 81C7A000                	add di,160
+  1727 000051AF 268905                  	mov [es:di],ax
+  1728 000051B2 81C7A000                	add di,160
+  1729 000051B6 26C7052030              	mov word [es:di],0x3020
+  1730 000051BB 5F                      	pop di
+  1731 000051BC 83C702                  	add di,2
+  1732 000051BF 26C7052030              	mov word [es:di],0x3020
+  1733 000051C4 81C7A000                	add di,160
+  1734 000051C8 268905                  	mov [es:di],ax
+  1735 000051CB 81C7A000                	add di,160
+  1736 000051CF 268905                  	mov [es:di],ax
+  1737 000051D2 81C7A000                	add di,160
+  1738 000051D6 268905                  	mov [es:di],ax
+  1739 000051D9 81C7A000                	add di,160
+  1740 000051DD 26C7052030              	mov word [es:di],0x3020
+  1741 000051E2 83EF04                  	sub di,4
+  1742 000051E5 B90300                  	mov cx,3
+  1743 000051E8 FD                      	std
+  1744 000051E9 F3AB                    	rep stosw
+  1745 000051EB E87FF5                  	call delay
+  1746 000051EE E87CF5                  	call delay
+  1747 000051F1 E879F5                  	call delay
+  1748 000051F4 E876F5                  	call delay
+  1749 000051F7 B40C                    	mov ah,00001100b
+  1750 000051F9 BF3807                  	mov di,1848
+  1751 000051FC 57                      	push di
+  1752 000051FD 268905                  	mov [es:di],ax
+  1753 00005200 81C7A000                	add di,160
+  1754 00005204 268905                  	mov [es:di],ax
+  1755 00005207 81C7A000                	add di,160
+  1756 0000520B 268905                  	mov [es:di],ax
+  1757 0000520E 81C7A000                	add di,160
+  1758 00005212 268905                  	mov [es:di],ax
+  1759 00005215 81C7A000                	add di,160
+  1760 00005219 268905                  	mov [es:di],ax
+  1761 0000521C 5F                      	pop di
+  1762 0000521D 83C702                  	add di,2
+  1763 00005220 268905                  	mov [es:di],ax
+  1764 00005223 81C7A000                	add di,160
+  1765 00005227 268905                  	mov [es:di],ax
+  1766 0000522A 81C7A000                	add di,160
+  1767 0000522E 268905                  	mov [es:di],ax
+  1768 00005231 81C7A000                	add di,160
+  1769 00005235 268905                  	mov [es:di],ax
+  1770 00005238 81C7A000                	add di,160
+  1771 0000523C 268905                  	mov [es:di],ax
+  1772 0000523F B90400                  	mov cx,4
+  1773 00005242 FC                      	cld
+  1774 00005243 F3AB                    	rep stosw
+  1775 00005245 57                      	push di
+  1776 00005246 268905                  	mov [es:di],ax
+  1777 00005249 81EFA000                	sub di,160
+  1778 0000524D 268905                  	mov [es:di],ax
+  1779 00005250 81EFA000                	sub di,160
+  1780 00005254 268905                  	mov [es:di],ax
+  1781 00005257 81EFA000                	sub di,160
+  1782 0000525B 268905                  	mov [es:di],ax
+  1783 0000525E 81EFA000                	sub di,160
+  1784 00005262 268905                  	mov [es:di],ax
+  1785 00005265 5F                      	pop di
+  1786 00005266 83C702                  	add di,2
+  1787 00005269 268905                  	mov [es:di],ax
+  1788 0000526C 81EFA000                	sub di,160
+  1789 00005270 268905                  	mov [es:di],ax
+  1790 00005273 81EFA000                	sub di,160
+  1791 00005277 268905                  	mov [es:di],ax
+  1792 0000527A 81EFA000                	sub di,160
+  1793 0000527E 268905                  	mov [es:di],ax
+  1794 00005281 81EFA000                	sub di,160
+  1795 00005285 268905                  	mov [es:di],ax
+  1796 00005288 81EF9E00                	sub di,158
+  1797 0000528C 57                      	push di
+  1798 0000528D B90500                  	mov cx,5
+  1799 00005290 E8DAF4                  	call delay
+  1800 00005293 E8D7F4                  	call delay
+  1801 00005296 E8D4F4                  	call delay
+  1802 00005299 E8D1F4                  	call delay
+  1803 0000529C B40E                    	mov ah,00001110b
+  1804 0000529E FC                      	cld
+  1805 0000529F 57                      	push di
+  1806 000052A0 F3AB                    	rep stosw
+  1807 000052A2 5F                      	pop di
+  1808 000052A3 57                      	push di
+  1809 000052A4 81C7A000                	add di,160
+  1810 000052A8 268905                  	mov [es:di],ax
+  1811 000052AB 81C7A000                	add di,160
+  1812 000052AF 268905                  	mov [es:di],ax
+  1813 000052B2 81C7A000                	add di,160
+  1814 000052B6 268905                  	mov [es:di],ax
+  1815 000052B9 81C7A000                	add di,160
+  1816 000052BD 268905                  	mov [es:di],ax
+  1817 000052C0 5F                      	pop di
+  1818 000052C1 81C7A200                	add di,162
+  1819 000052C5 268905                  	mov [es:di],ax
+  1820 000052C8 81C7A000                	add di,160
+  1821 000052CC 268905                  	mov [es:di],ax
+  1822 000052CF 81C7A000                	add di,160
+  1823 000052D3 268905                  	mov [es:di],ax
+  1824 000052D6 81C7A000                	add di,160
+  1825 000052DA 268905                  	mov [es:di],ax
+  1826 000052DD 83C702                  	add di,2
+  1827 000052E0 B90300                  	mov cx,3
+  1828 000052E3 F3AB                    	rep stosw
+  1829 000052E5 5F                      	pop di
+  1830 000052E6 81C7AA00                	add di,170
+  1831 000052EA B90500                  	mov cx,5
+  1832 000052ED E87DF4                  	call delay
+  1833 000052F0 E87AF4                  	call delay
+  1834 000052F3 E877F4                  	call delay
+  1835 000052F6 E874F4                  	call delay
+  1836 000052F9 B40C                    	mov ah,00001100b
+  1837 000052FB FC                      	cld
+  1838 000052FC 57                      	push di
+  1839 000052FD F3AB                    	rep stosw
+  1840 000052FF 5F                      	pop di
+  1841 00005300 57                      	push di
+  1842 00005301 81C7A000                	add di,160
+  1843 00005305 268905                  	mov [es:di],ax
+  1844 00005308 81C7A000                	add di,160
+  1845 0000530C 268905                  	mov [es:di],ax
+  1846 0000530F 81C7A000                	add di,160
+  1847 00005313 268905                  	mov [es:di],ax
+  1848 00005316 81C7A000                	add di,160
+  1849 0000531A 268905                  	mov [es:di],ax
+  1850 0000531D 5F                      	pop di
+  1851 0000531E 81C7A200                	add di,162
+  1852 00005322 268905                  	mov [es:di],ax
+  1853 00005325 81C7A000                	add di,160
+  1854 00005329 268905                  	mov [es:di],ax
+  1855 0000532C 81C7A000                	add di,160
+  1856 00005330 268905                  	mov [es:di],ax
+  1857 00005333 81C7A000                	add di,160
+  1858 00005337 268905                  	mov [es:di],ax
+  1859 0000533A 83C702                  	add di,2
+  1860 0000533D B90300                  	mov cx,3
+  1861 00005340 F3AB                    	rep stosw
+  1862 00005342 E828F4                  	call delay
+  1863 00005345 E825F4                  	call delay
+  1864 00005348 E822F4                  	call delay
+  1865 0000534B E81FF4                  	call delay
+  1866 0000534E B413                    	mov ah,0x13
+  1867 00005350 B000                    	mov al,0
+  1868 00005352 B700                    	mov bh,0
+  1869 00005354 B330                    	mov bl,0x30
+  1870 00005356 B90B00                  	mov cx,11
+  1871 00005359 B615                    	mov dh, 21
+  1872 0000535B B200                    	mov dl, 0
+  1873 0000535D 1E                      	push ds
+  1874 0000535E 07                      	pop es
+  1875 0000535F BD[891F]                	mov bp,createdbymessage
+  1876 00005362 CD10                    	int 0x10
+  1877 00005364 B33E                    	mov bl,0x3E
+  1878 00005366 B92800                  	mov cx,40
+  1879 00005369 B616                    	mov dh, 22
+  1880 0000536B B200                    	mov dl, 0
+  1881 0000536D BD[941F]                	mov bp,name1
+  1882 00005370 CD10                    	int 0x10
+  1883 00005372 B334                    	mov bl,0x34
+  1884 00005374 B92500                  	mov cx,37
+  1885 00005377 B617                    	mov dh, 23
+  1886 00005379 B200                    	mov dl, 0
+  1887 0000537B BD[BC1F]                	mov bp,name2
+  1888 0000537E CD10                    	int 0x10
+  1889 00005380 B33F                    	mov bl,0x3F
+  1890 00005382 B91C00                  	mov cx,28
+  1891 00005385 B617                    	mov dh, 23
+  1892 00005387 B233                    	mov dl, 51
+  1893 00005389 BD[E11F]                	mov bp,titlemessage
+  1894 0000538C CD10                    	int 0x10
+  1895                                  	LoopTitleBird:
+  1896 0000538E FF36[6A21]              	push word [TitleBirbRow1]
+  1897 00005392 6A37                    	push word 55
+  1898 00005394 E875FA                  	call ClearBirbTitle
+  1899 00005397 FF36[6C21]              	push word [TitleBirbRow2]
+  1900 0000539B 6A0F                    	push word 15
+  1901 0000539D E86CFA                  	call ClearBirbTitle
+  1902 000053A0 833E[6A21]08            	cmp word [TitleBirbRow1],8
+  1903 000053A5 7506                    	jne ahead11
+  1904 000053A7 C706[6E21]0100          	mov word [TitleBirbflag],1	
+  1905                                  	ahead11:
+  1906 000053AD 833E[6A21]03            	cmp word [TitleBirbRow1],3
+  1907 000053B2 7506                    	jne ahead12
+  1908 000053B4 C706[6E21]0000          	mov word [TitleBirbflag],0	
+  1909                                  	ahead12:
+  1910 000053BA 833E[6E21]01            	cmp word [TitleBirbflag],1
+  1911 000053BF 750A                    	jne ahead9
+  1912 000053C1 FF0E[6A21]              	dec word [TitleBirbRow1]
+  1913 000053C5 FF06[6C21]              	inc word [TitleBirbRow2]
+  1914 000053C9 EB08                    	jmp ahead10
+  1915                                  	ahead9:
+  1916 000053CB FF0E[6C21]              	dec word [TitleBirbRow2]
+  1917 000053CF FF06[6A21]              	inc word [TitleBirbRow1]
+  1918                                  	ahead10:
+  1919 000053D3 FF36[6A21]              	push word [TitleBirbRow1]
+  1920 000053D7 6A37                    	push word 55
+  1921 000053D9 E8B4F9                  	call PrintBirbTitle
+  1922 000053DC FF36[6C21]              	push word [TitleBirbRow2]
+  1923 000053E0 6A0F                    	push word 15
+  1924 000053E2 E8ABF9                  	call PrintBirbTitle
+  1925 000053E5 E885F3                  	call delay
+  1926 000053E8 E882F3                  	call delay
+  1927 000053EB E87FF3                  	call delay
+  1928 000053EE B401                    	mov ah,1
+  1929 000053F0 CD16                    	int 0x16
+  1930 000053F2 749A                        jz LoopTitleBird
+  1931 000053F4 B400                    	mov ah,0
+  1932 000053F6 CD16                    	int 0x16
+  1933 000053F8 07                      	pop es
+  1934 000053F9 61                      	popa
+  1935 000053FA C3                      	ret
