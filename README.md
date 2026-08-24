@@ -97,7 +97,7 @@ Background music was integrated into the game using music data and low-level por
 
 The project was developed collaboratively, with both team members contributing to multiple parts of the implementation. The following lists the primary areas each member worked on.
 
-### Meerab Munir — `meerab munir / fastcel`
+### Meerab Munir — `fastcel`
 
 - Designed and implemented the title screen
 - Worked on the title screen's visual layout and presentation
@@ -109,7 +109,7 @@ The project was developed collaboratively, with both team members contributing t
 - Helped refine gameplay and user experience
 - Assisted with overall project integration and final polishing
 
-### Shehryar Hassan — `shehryar789 / shehryar hassan`
+### Shehryar Hassan — `shehryarhassan789`
 
 - Contributed to the overall game design
 - Designed and implemented core game mechanics
