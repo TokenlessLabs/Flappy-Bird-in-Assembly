@@ -1,4 +1,4 @@
-# Floppy Ducks
+# Floppy Ducc
 
 A Flappy Bird-inspired game developed in **x86 Assembly Language** as a **Computer Organization and Assembly Language (COAL) project**.
 
@@ -10,7 +10,7 @@ The objective is to avoid the pillars and survive for as long as possible while 
 
 The game features:
 
-- Floppy duck character
+- Floppy ducc character
 - Moving pillar obstacles
 - Gravity-based movement
 - Collision detection
